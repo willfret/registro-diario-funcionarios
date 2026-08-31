@@ -153,6 +153,8 @@
     th, td { text-align:left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
     th { font-size: 13px; text-transform: uppercase; letter-spacing:.04em; color: var(--accent); }
     .status { margin-top: 12px; font-weight: 700; color: var(--accent-3); }
+    .toast { display:none; margin-top:14px; padding:12px 16px; border:1px solid rgba(31,110,74,.3); border-radius:12px; background:#e9f7ef; color:#17613e; font-weight:800; text-align:center; }
+    .toast.show { display:block; }
     .hint { color: var(--muted); font-size: 14px; line-height: 1.5; }
     .quickbar {
       display: grid;
@@ -391,6 +393,7 @@
         </div>
 
         <div class="status" id="status"></div>
+        <div class="toast" id="successToast" role="status" aria-live="polite">Registro guardado exitosamente</div>
       </form>
     </section>
 
@@ -527,6 +530,7 @@
     const salidaHora = document.getElementById('salidaHora');
     const entradaHora = document.getElementById('entradaHora');
     const statusEl = document.getElementById('status');
+    const successToast = document.getElementById('successToast');
     const newEmployee = document.getElementById('newEmployee');
     const addEmployeeBtn = document.getElementById('addEmployeeBtn');
     const monthlyEmployee = document.getElementById('monthlyEmployee');
@@ -605,6 +609,13 @@
     entradaHora.value = today.toTimeString().slice(0, 5);
 
     function setStatus(msg) { statusEl.textContent = msg; }
+
+    function showSuccess(message) {
+      successToast.textContent = message;
+      successToast.classList.add('show');
+      window.clearTimeout(showSuccess.timer);
+      showSuccess.timer = window.setTimeout(() => successToast.classList.remove('show'), 3500);
+    }
 
     let localRecords = null;
 
@@ -748,6 +759,7 @@
         document.getElementById('motivo').value
       ], res => {
           setStatus(res.message || 'Registro guardado exitosamente.');
+          showSuccess('Hecho: registro guardado exitosamente');
           form.reset();
           fecha.value = today.toISOString().slice(0, 10);
           salidaHora.value = new Date().toTimeString().slice(0, 5);
