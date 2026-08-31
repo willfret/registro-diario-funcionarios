@@ -106,6 +106,24 @@ function replaceImportedRecords() {
   return { ok: true, rows: importedRecords.length, preserved: currentRecords.length, message: `${importedRecords.length} registros del Excel reemplazados; ${currentRecords.length} registros nuevos conservados.` };
 }
 
+function replaceMarchMayRecords() {
+  const response = UrlFetchApp.fetch(LEGACY_RECORDS_CSV_URL, { muteHttpExceptions: true });
+  if (response.getResponseCode() !== 200) throw new Error('No se pudo leer el Excel sincronizado.');
+  const months = ['2026-03', '2026-04', '2026-05'];
+  const rows = Utilities.parseCsv(response.getContentText()).slice(1)
+    .filter(row => row.length >= 6 && months.some(month => String(row[0]).startsWith(month)));
+  const { sheet } = ensureDatabase_();
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0] || ['Timestamp', 'Fecha', 'Hora', 'Funcionario', 'Tipo', 'Motivo', 'Usuario'];
+  const preserved = values.slice(1).filter(row => !months.includes(dateText_(row[1]).slice(0, 7)));
+  const imported = rows.map(row => [new Date(), row[0], row[1], row[2], row[3], row[4], row[5]]);
+  const output = [headers].concat(preserved, imported);
+  sheet.clearContents();
+  sheet.getRange(1, 1, output.length, output[0].length).setValues(output);
+  sheet.setFrozenRows(1);
+  return { ok: true, rows: imported.length, preserved: preserved.length, message: `Marzo, abril y mayo reemplazados con ${imported.length} registros del Excel.` };
+}
+
 function deduplicateRecords() {
   const { sheet } = ensureDatabase_();
   if (sheet.getLastRow() < 2) return { ok: true, removed: 0, message: 'No hay registros para limpiar.' };
