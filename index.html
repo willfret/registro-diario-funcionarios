@@ -693,6 +693,9 @@
       dbIndicator.classList.add('disconnected');
       dbIndicator.innerHTML = '<span class="db-dot"></span>Conectando con Google Sheets...';
       callBackend('getEmployees', [], list => {
+          if (!Array.isArray(list) || !list.length) {
+            return loadLocalRecords(records => fillEmployees([...new Set(records.map(row => row.funcionario).filter(Boolean))].sort()), () => {});
+          }
           fillEmployees(list);
           dbIndicator.classList.remove('disconnected');
           dbIndicator.innerHTML = '<span class="db-dot"></span>Conectado con Google Sheets';
@@ -792,6 +795,16 @@
       if (!name) return setStatus('Escribe un funcionario para buscar el registro mensual.');
       monthlyValue.value = monthlyValue.value || fecha.value.slice(0, 7);
       callBackend('getEmployeeDetail', [name, 'month', monthlyValue.value], res => {
+          if (!res || !res.items || !res.items.length) {
+            return loadLocalRecords(() => {
+              const local = localEmployeeDetail(monthlyEmployee.value, 'month', monthlyValue.value);
+              detailEntries.textContent = String(local.summary.entries);
+              detailExits.textContent = String(local.summary.exits);
+              detailReturns.textContent = String(local.summary.returns);
+              detailHours.textContent = local.summary.totalHours;
+              monthlyDetailBody.innerHTML = local.items.length ? local.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+            }, () => {});
+          }
           const s = res.summary || {};
           detailEntries.textContent = String(s.entries || 0);
           detailExits.textContent = String(s.exits || 0);
