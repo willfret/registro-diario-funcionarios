@@ -426,6 +426,7 @@
         <div>
           <label for="monthlyValue">Mes</label>
           <input id="monthlyValue" type="month" />
+          <div class="hint">Selecciona un mes. El histórico del Excel contiene marzo, abril y mayo de 2026.</div>
         </div>
       </div>
       <div class="actions" style="margin-top:0;">
@@ -651,6 +652,10 @@
       return { items: rows, summary: { entries, exits, returns, totalMinutes, totalHours: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` } };
     }
 
+    function latestLocalMonth() {
+      return [...new Set((localRecords || []).map(row => String(row.fecha || '').slice(0, 7)).filter(Boolean))].sort().pop() || '';
+    }
+
     function callBackend(action, params, success, failure) {
       if (typeof google !== 'undefined' && google.script && google.script.run) {
         return google.script.run.withSuccessHandler(success).withFailureHandler(failure)[action](...(params || []));
@@ -801,7 +806,7 @@
     function loadMonthlyDetail() {
       const name = monthlyEmployee.value.trim();
       if (!name) return setStatus('Escribe un funcionario para buscar el registro mensual.');
-      monthlyValue.value = monthlyValue.value || fecha.value.slice(0, 7);
+      monthlyValue.value = monthlyValue.value || latestLocalMonth() || fecha.value.slice(0, 7);
       callBackend('getEmployeeDetail', [name, 'month', monthlyValue.value], res => {
           if (!res || !res.items || !res.items.length) {
             return loadLocalRecords(() => {
