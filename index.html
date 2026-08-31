@@ -90,6 +90,15 @@
       background: #1f6e4a;
       box-shadow: 0 0 0 4px rgba(31,110,74,.16);
     }
+    .db-indicator.disconnected {
+      background: rgba(105,118,130,.12);
+      color: #66717b;
+      border-color: rgba(105,118,130,.2);
+    }
+    .db-indicator.disconnected .db-dot {
+      background: #9aa5ae;
+      box-shadow: none;
+    }
     .banner {
       display: flex;
       gap: 10px;
@@ -337,7 +346,7 @@
         <p>Registro de salidas diarias funcionarios</p>
       </div>
       <div class="topbar-actions">
-        <span class="db-indicator" id="dbIndicator"><span class="db-dot"></span>Conectado con Google Sheets</span>
+        <span class="db-indicator disconnected" id="dbIndicator"><span class="db-dot"></span>Sin conexión</span>
         <button type="button" class="secondary" id="logoutBtn">Cerrar sesión</button>
       </div>
     </section>
@@ -644,12 +653,15 @@
 
     function loadEmployees() {
       const dbIndicator = document.getElementById('dbIndicator');
-      dbIndicator.textContent = 'Conectando con Google Sheets...';
+      dbIndicator.classList.add('disconnected');
+      dbIndicator.innerHTML = '<span class="db-dot"></span>Conectando con Google Sheets...';
       callBackend('getEmployees', [], list => {
           fillEmployees(list);
+          dbIndicator.classList.remove('disconnected');
           dbIndicator.innerHTML = '<span class="db-dot"></span>Conectado con Google Sheets';
         }, err => {
           setStatus(err.message || String(err));
+          dbIndicator.classList.add('disconnected');
           dbIndicator.innerHTML = '<span class="db-dot" style="background:#a33b3b; box-shadow:0 0 0 4px rgba(163,59,59,.16);"></span>Sin conexión';
         });
     }

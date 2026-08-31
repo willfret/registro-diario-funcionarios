@@ -2,6 +2,7 @@ const SPREADSHEET_ID = '1_A8FyTO3u1L1Pn9l6YGCGS0MIPHIrjCO2LiKZgBtj3U';
 const SHEET_NAME = 'Registros';
 const EMPLOYEE_SHEET = 'Funcionarios';
 const LEGACY_CSV_URL = 'https://raw.githubusercontent.com/escuelaoriente/registro-diario-funcionarios/main/historico-excel.csv';
+const LEGACY_RECORDS_CSV_URL = 'https://raw.githubusercontent.com/willfret/registro-diario-funcionarios/main/legacy-records.csv';
 
 function doGet(request) {
   if (request && request.parameter && request.parameter.action) {
@@ -67,6 +68,25 @@ function importLegacyCsv() {
   sheet.setFrozenRows(1);
   sheet.autoResizeColumns(1, 4);
   return { ok: true, rows: Math.max(0, rows.length - 1), message: 'Histórico del Excel importado correctamente.' };
+}
+
+function syncLegacyRecords() {
+  const response = UrlFetchApp.fetch(LEGACY_RECORDS_CSV_URL, { muteHttpExceptions: true });
+  if (response.getResponseCode() !== 200) throw new Error('No se pudo leer el histórico normalizado.');
+  const rows = Utilities.parseCsv(response.getContentText()).slice(1);
+  const { sheet } = ensureDatabase_();
+  const existing = new Set();
+  if (sheet.getLastRow() >= 2) {
+    sheet.getDataRange().getValues().slice(1).forEach(row => existing.add([row[1], row[2], row[3], row[4]].join('|')));
+  }
+  const newRows = rows.filter(row => row.length >= 6).filter(row => {
+    const key = [row[0], row[1], row[2], row[3]].join('|');
+    if (existing.has(key)) return false;
+    existing.add(key);
+    return true;
+  }).map(row => [new Date(), row[0], row[1], row[2], row[3], row[4], row[5]]);
+  if (newRows.length) sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 7).setValues(newRows);
+  return { ok: true, rows: newRows.length, message: `${newRows.length} registros históricos sincronizados.` };
 }
 
 function ensureDatabase_() {
