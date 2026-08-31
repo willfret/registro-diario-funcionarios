@@ -434,6 +434,7 @@
       </div>
       <div class="actions" style="margin-top:0;">
         <button type="button" id="searchMonthlyBtn">Buscar registro mensual</button>
+        <button type="button" class="secondary" id="downloadReportBtn" disabled>Descargar reporte</button>
       </div>
       <div class="detail-grid" style="margin-top:14px;">
         <div class="box"><div class="value" id="detailEntries">0</div><div class="label">Entradas</div></div>
@@ -537,6 +538,7 @@
     const employeeListMonthly = document.getElementById('employeeListMonthly');
     const monthlyValue = document.getElementById('monthlyValue');
     const searchMonthlyBtn = document.getElementById('searchMonthlyBtn');
+    const downloadReportBtn = document.getElementById('downloadReportBtn');
     const monthlyDetailBody = document.getElementById('monthlyDetailBody');
     const detailMode = document.getElementById('detailMode');
     const detailValue = document.getElementById('detailValue');
@@ -549,6 +551,7 @@
     const detailHours = document.getElementById('detailHours');
     const backBtn = document.getElementById('backBtn');
     const backMonthlyBtn = document.getElementById('backMonthlyBtn');
+    let currentMonthlyReport = null;
 
     const today = new Date();
     const AUTH_EMAIL = 'alejandra.rodriguez@escuelaoriente.cl';
@@ -673,7 +676,7 @@
       return iso ? `${iso[1]}:${iso[2]}` : text.slice(0, 5);
     }
 
-    function renderPairedRows(items) {
+    function pairRecords(items) {
       const rows = [];
       let pending = null;
       (items || []).forEach(item => {
@@ -690,7 +693,43 @@
         }
       });
       if (pending) rows.push(pending);
-      return rows.map(row => `<tr><td>${row.fecha}</td><td>${row.salida || '-'}</td><td>${row.regreso || '-'}</td><td>${row.motivo}</td></tr>`).join('');
+      return rows;
+    }
+
+    function renderPairedRows(items) {
+      return pairRecords(items).map(row => `<tr><td>${row.fecha}</td><td>${row.salida || '-'}</td><td>${row.regreso || '-'}</td><td>${row.motivo}</td></tr>`).join('');
+    }
+
+    function setReportData(name, month, result) {
+      currentMonthlyReport = { name, month, items: pairRecords(result.items || []), summary: result.summary || {} };
+      downloadReportBtn.disabled = !currentMonthlyReport.items.length;
+    }
+
+    function csvCell(value) {
+      return `"${String(value ?? '').replace(/"/g, '""')}"`;
+    }
+
+    function downloadReport() {
+      if (!currentMonthlyReport) return;
+      const report = currentMonthlyReport;
+      const lines = [
+        ['Reporte de salidas y regresos', ''],
+        ['Funcionario', report.name],
+        ['Período', report.month],
+        ['Número de salidas', report.summary.exits || 0],
+        ['Tiempo total fuera', report.summary.totalHours || '0h 0m'],
+        [],
+        ['Fecha', 'Hora salida', 'Hora regreso', 'Motivo'],
+        ...report.items.map(row => [row.fecha, row.salida || '', row.regreso || '', row.motivo])
+      ];
+      const csv = '\uFEFF' + lines.map(row => row.map(csvCell).join(';')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reporte-${report.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${report.month}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
     }
 
     function setMonthlySearching(searching) {
@@ -850,6 +889,7 @@
           if (!res || !res.items || !res.items.length) {
             return loadLocalRecords(() => {
               const local = localEmployeeDetail(monthlyEmployee.value, 'month', monthlyValue.value);
+              setReportData(monthlyEmployee.value, monthlyValue.value, local);
               detailEntries.textContent = String(local.summary.entries);
               detailExits.textContent = String(local.summary.exits);
               detailReturns.textContent = String(local.summary.returns);
@@ -858,6 +898,7 @@
             }, () => {});
           }
           const s = res.summary || {};
+          setReportData(monthlyEmployee.value, monthlyValue.value, res);
           detailEntries.textContent = String(s.entries || 0);
           detailExits.textContent = String(s.exits || 0);
           detailReturns.textContent = String(s.returns || 0);
@@ -871,6 +912,7 @@
         }, err => loadLocalRecords(() => {
           setMonthlySearching(false);
           const res = localEmployeeDetail(monthlyEmployee.value, 'month', monthlyValue.value);
+          setReportData(monthlyEmployee.value, monthlyValue.value, res);
           detailEntries.textContent = String(res.summary.entries);
           detailExits.textContent = String(res.summary.exits);
           detailReturns.textContent = String(res.summary.returns);
@@ -883,6 +925,7 @@
       showScreen(monthlyScreen);
       loadMonthlyDetail();
     });
+    downloadReportBtn.addEventListener('click', downloadReport);
     backMonthlyBtn.addEventListener('click', () => showScreen(mainScreen));
     backBtn.addEventListener('click', () => showScreen(mainScreen));
     detailMode.addEventListener('change', () => {
