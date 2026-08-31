@@ -656,6 +656,12 @@
       return [...new Set((localRecords || []).map(row => String(row.fecha || '').slice(0, 7)).filter(Boolean))].sort().pop() || '';
     }
 
+    function displayTime(value) {
+      const text = String(value || '');
+      const iso = text.match(/T(\d{2}):(\d{2})/);
+      return iso ? `${iso[1]}:${iso[2]}` : text.slice(0, 5);
+    }
+
     function callBackend(action, params, success, failure) {
       if (typeof google !== 'undefined' && google.script && google.script.run) {
         return google.script.run.withSuccessHandler(success).withFailureHandler(failure)[action](...(params || []));
@@ -752,7 +758,7 @@
           detailExits.textContent = String(res.summary.exits);
           detailReturns.textContent = String(res.summary.returns);
           detailHours.textContent = res.summary.totalHours;
-          detailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+           detailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${displayTime(item.hora)}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
         }, () => setStatus(err.message || String(err))));
     });
 
@@ -788,7 +794,7 @@
           detailBody.innerHTML = items.map(item => `
             <tr>
               <td>${item.fecha || ''}</td>
-              <td>${item.hora || ''}</td>
+              <td>${displayTime(item.hora)}</td>
               <td>${item.tipo || ''}</td>
               <td>${item.motivo || ''}</td>
             </tr>
@@ -799,7 +805,7 @@
           detailExits.textContent = String(res.summary.exits);
           detailReturns.textContent = String(res.summary.returns);
           detailHours.textContent = res.summary.totalHours;
-          detailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+          detailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${displayTime(item.hora)}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
         }, () => setStatus(err.message || String(err))));
     }
 
@@ -815,7 +821,7 @@
               detailExits.textContent = String(local.summary.exits);
               detailReturns.textContent = String(local.summary.returns);
               detailHours.textContent = local.summary.totalHours;
-              monthlyDetailBody.innerHTML = local.items.length ? local.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+              monthlyDetailBody.innerHTML = local.items.length ? local.items.map(item => `<tr><td>${item.fecha}</td><td>${displayTime(item.hora)}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
             }, () => {});
           }
           const s = res.summary || {};
@@ -831,7 +837,7 @@
           monthlyDetailBody.innerHTML = items.map(item => `
             <tr>
               <td>${item.fecha || ''}</td>
-              <td>${item.hora || ''}</td>
+              <td>${displayTime(item.hora)}</td>
               <td>${item.tipo || ''}</td>
               <td>${item.motivo || ''}</td>
             </tr>
@@ -842,7 +848,7 @@
           detailExits.textContent = String(res.summary.exits);
           detailReturns.textContent = String(res.summary.returns);
           detailHours.textContent = res.summary.totalHours;
-          monthlyDetailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+           monthlyDetailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${displayTime(item.hora)}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
         }, () => setStatus(err.message || String(err))));
     }
 
