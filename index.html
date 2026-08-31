@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de salidas diarias</title>
+  <style>
+    :root {
+      --bg: #dfe8f0;
+      --panel: #f8fbfe;
+      --text: #10263d;
+      --muted: #44596f;
+      --accent: #163f76;
+      --accent-2: #b88614;
+      --accent-3: #1f6e4a;
+      --accent-4: #5b3aa8;
+      --line: #b8c9db;
+      --shadow: 0 18px 50px rgba(16, 38, 61, 0.18);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(22,63,118,.24), transparent 28%),
+        radial-gradient(circle at top right, rgba(184,134,20,.20), transparent 26%),
+        radial-gradient(circle at 50% 20%, rgba(31,110,74,.16), transparent 34%),
+        radial-gradient(circle at 20% 80%, rgba(91,58,168,.12), transparent 24%),
+        var(--bg);
+      color: var(--text);
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .hero {
+      background: linear-gradient(135deg, #173f5f, #0f766e 55%, #b45309);
+      color: white;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+    .hero h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 42px); }
+    .hero p { margin: 0; max-width: 760px; line-height: 1.5; opacity: .95; }
+    .topbar {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      padding: 18px 22px;
+      margin-bottom: 18px;
+      background: linear-gradient(135deg, rgba(22,63,118,.14), rgba(31,110,74,.12), rgba(184,134,20,.16), rgba(255,255,255,.96));
+      border: 1px solid rgba(22,63,118,.22);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+    .topbar img {
+      width: 190px;
+      height: 190px;
+      object-fit: contain;
+      flex: 0 0 auto;
+      filter: drop-shadow(0 14px 24px rgba(16, 38, 61, .28));
+    }
+    .topbar h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.15;
+    }
+    .topbar p { margin: 6px 0 0; color: var(--muted); }
+    .topbar-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .db-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(31,110,74,.12);
+      color: #1f6e4a;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid rgba(31,110,74,.22);
+    }
+    .db-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #1f6e4a;
+      box-shadow: 0 0 0 4px rgba(31,110,74,.16);
+    }
+    .banner {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding: 12px;
+      background: linear-gradient(135deg, rgba(22,63,118,.18), rgba(31,110,74,.16), rgba(184,134,20,.20), rgba(91,58,168,.14));
+      border: 1px solid rgba(22,63,118,.24);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+    .banner button {
+      width: auto;
+      min-width: 160px;
+      padding: 10px 14px;
+      border-radius: 999px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    .card {
+      background: linear-gradient(180deg, rgba(250,252,255,.98), rgba(238,244,250,.96));
+      border: 1px solid rgba(22,63,118,.18);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+    .card h2 { margin: 0 0 14px; font-size: 20px; }
+    label { display:block; margin: 10px 0 6px; font-weight: 600; }
+    select, input, textarea, button {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #d8cbbb;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+    }
+    textarea { min-height: 92px; resize: vertical; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .actions { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .actions .stack { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    button {
+      background: linear-gradient(135deg, #0f2f59, var(--accent) 55%, var(--accent-4));
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button.secondary { background: linear-gradient(135deg, #f7fbff, #e4edf6); color: var(--text); border: 1px solid var(--line); }
+    button:hover { filter: brightness(1.04); }
+    table { width:100%; border-collapse: collapse; overflow:hidden; border-radius: 14px; }
+    th, td { text-align:left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-size: 13px; text-transform: uppercase; letter-spacing:.04em; color: var(--accent); }
+    .status { margin-top: 12px; font-weight: 700; color: var(--accent-3); }
+    .hint { color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .quickbar {
+      display: grid;
+      grid-template-columns: 1.3fr .8fr .8fr .8fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .login-shell {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 0;
+      align-items: stretch;
+      min-height: calc(100vh - 170px);
+      overflow: hidden;
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(22,63,118,.12), rgba(31,110,74,.10), rgba(184,134,20,.12), rgba(255,255,255,.98));
+      border: 1px solid rgba(22,63,118,.14);
+      box-shadow: var(--shadow);
+    }
+    .login-panel {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      padding: 34px 40px 34px 40px;
+      box-shadow: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 560px;
+      width: 100%;
+      margin-left: auto;
+    }
+    .login-hero {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border-radius: 0;
+      padding: 28px 18px 28px 34px;
+      min-height: 460px;
+    }
+    .login-hero img {
+      width: min(100%, 280px);
+      height: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 16px 28px rgba(16, 38, 61, .22));
+    }
+    .check-row {
+      display: flex;
+      gap: 18px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .check-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      font-weight: 600;
+      user-select: none;
+    }
+    .check-item input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+    .auth-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .login-title {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+    .login-title h2 {
+      margin: 0;
+      font-size: 28px;
+      color: var(--accent);
+    }
+    .login-title p {
+      margin: 0;
+      color: var(--muted);
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .detail-hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .detail-grid .box { background: #f8f2ea; border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+    .detail-grid .value { font-size: 24px; font-weight: 800; }
+    .detail-list { max-height: 520px; overflow:auto; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(22,63,118,.20), rgba(31,110,74,.16), rgba(184,134,20,.22));
+      color: #1b4e87;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .topbar h2 {
+      font-size: 26px;
+      color: #173f5f;
+    }
+    .topbar p {
+      font-size: 15px;
+      font-weight: 600;
+      color: #2f6f4a;
+    }
+    @media (max-width: 900px) {
+      .topbar { flex-direction: column; align-items: flex-start; }
+      .grid { grid-template-columns: 1fr; }
+      .quickbar { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+      .row3 { grid-template-columns: 1fr; }
+      .login-shell { min-height: auto; grid-template-columns: 1fr; }
+      .login-panel { max-width: none; margin-left: 0; padding: 22px; }
+      .login-hero { min-height: 220px; padding: 18px; }
+      .login-hero img { width: min(100%, 220px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="screen active" id="loginScreen" style="margin-top:18px;">
+      <div class="login-shell">
+        <div class="login-panel">
+          <div class="login-title">
+            <h2>Ingreso al sistema</h2>
+            <p>Accede al control de salidas diarias de funcionarios.</p>
+          </div>
+          <div class="row">
+            <div>
+              <label for="loginEmail">Correo</label>
+              <input id="loginEmail" type="email" autocomplete="username" placeholder="Ingresa tu correo" />
+            </div>
+            <div>
+              <label for="loginPassword">Contraseña</label>
+              <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Tu contraseña" />
+            </div>
+          </div>
+          <div class="check-row">
+            <label class="check-item" for="showPasswordCheck">
+              <input type="checkbox" id="showPasswordCheck" />
+              Ver contraseña
+            </label>
+            <label class="check-item" for="rememberCheck">
+              <input type="checkbox" id="rememberCheck" checked />
+              Recordar usuario
+            </label>
+          </div>
+          <div class="actions" style="margin-top:14px;">
+            <button type="button" id="loginBtn">Entrar</button>
+          </div>
+          <div class="auth-note" id="authNote">La sesión se cierra al cerrar la página. Recordar usuario solo guarda el correo en este navegador.</div>
+        </div>
+        <div class="login-hero">
+          <img src="logo-transparente.png" alt="Escuela Oriente" />
+        </div>
+      </div>
+    </section>
+
+    <div id="appShell" class="screen">
+    <section class="topbar">
+      <img src="logo-transparente.png" alt="Escuela Oriente" />
+      <div>
+        <h2>Escuela Oriente</h2>
+        <p>Registro de salidas diarias funcionarios</p>
+      </div>
+      <div class="topbar-actions">
+        <span class="db-indicator" id="dbIndicator"><span class="db-dot"></span>Conectado con Google Sheets</span>
+        <button type="button" class="secondary" id="logoutBtn">Cerrar sesión</button>
+      </div>
+    </section>
+
+    <nav class="banner" aria-label="Menú principal">
+      <button type="button" class="secondary" id="goMainBtn">Registro rápido</button>
+      <button type="button" class="secondary" id="goAddBtn">Agregar nuevo funcionario</button>
+      <button type="button" class="secondary" id="goMonthlyBtn">Registro mensuales</button>
+    </nav>
+
+    <section class="card screen active" id="mainScreen" style="margin-top:18px;">
+      <h2>Registro rápido</h2>
+      <form id="form">
+        <div class="row">
+          <div>
+            <label for="fecha">Fecha</label>
+            <input type="date" id="fecha" />
+          </div>
+          <div>
+            <label for="motivo">Motivo</label>
+            <input type="text" id="motivo" placeholder="Reunión, colación, diligencia..." />
+          </div>
+        </div>
+
+        <label for="searchFuncionario">Funcionario</label>
+        <input id="searchFuncionario" type="text" list="employeeList" placeholder="Escribe el nombre..." required />
+        <datalist id="employeeList"></datalist>
+
+        <div class="row3">
+          <div>
+            <label for="salidaHora">Hora salida</label>
+            <input type="time" id="salidaHora" />
+          </div>
+          <div>
+            <label for="entradaHora">Hora entrada</label>
+            <input type="time" id="entradaHora" />
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button type="submit">Guardar</button>
+          </div>
+        </div>
+
+        <div class="status" id="status"></div>
+      </form>
+    </section>
+
+    <section class="card screen active" id="addEmployeeScreen" style="margin-top:18px;">
+      <h2>Agregar funcionario</h2>
+      <div class="row" style="margin-bottom: 14px;">
+        <div>
+          <label for="newEmployee">Nombre completo</label>
+          <input id="newEmployee" type="text" placeholder="Escribe el nombre completo" />
+        </div>
+        <div style="align-self:end;">
+          <button type="button" id="addEmployeeBtn">Agregar funcionario</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card screen active" id="monthlyScreen" style="margin-top:18px;">
+      <div class="detail-hero">
+        <div>
+          <h2 style="margin:0;">Buscar registro mensual</h2>
+          <p class="hint" style="margin:4px 0 0;">Revisa el historial de un funcionario por mes.</p>
+        </div>
+        <div class="actions" style="margin:0;">
+          <button type="button" class="secondary" id="backMonthlyBtn">Volver</button>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom: 14px;">
+        <div>
+          <label for="monthlyEmployee">Funcionario</label>
+          <input id="monthlyEmployee" type="text" list="employeeListMonthly" placeholder="Escribe el nombre..." />
+          <datalist id="employeeListMonthly"></datalist>
+        </div>
+        <div>
+          <label for="monthlyValue">Mes</label>
+          <input id="monthlyValue" type="month" />
+        </div>
+      </div>
+      <div class="actions" style="margin-top:0;">
+        <button type="button" id="searchMonthlyBtn">Buscar registro mensual</button>
+      </div>
+      <div class="detail-grid" style="margin-top:14px;">
+        <div class="box"><div class="value" id="detailEntries">0</div><div class="label">Entradas</div></div>
+        <div class="box"><div class="value" id="detailExits">0</div><div class="label">Salidas</div></div>
+        <div class="box"><div class="value" id="detailReturns">0</div><div class="label">Regresos</div></div>
+        <div class="box"><div class="value" id="detailHours">0h 0m</div><div class="label">Tiempo fuera</div></div>
+      </div>
+      <div class="detail-list">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Hora</th>
+              <th>Tipo</th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyDetailBody">
+            <tr><td colspan="4">Busca un funcionario para ver su registro mensual.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card screen" id="detailScreen" style="margin-top:18px;">
+      <div class="detail-hero">
+        <div>
+          <h2 id="detailTitle" style="margin:0;">Detalle del funcionario</h2>
+          <p class="hint" id="detailSubtitle" style="margin:4px 0 0;">Resumen del período buscado.</p>
+        </div>
+        <div class="actions" style="margin:0;">
+          <button type="button" class="secondary" id="backBtn">Volver</button>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:14px;">
+        <div>
+          <label for="detailMode">Buscar por</label>
+          <select id="detailMode">
+            <option value="month">Mes</option>
+            <option value="day">Día</option>
+          </select>
+        </div>
+        <div>
+          <label for="detailValue">Período</label>
+          <input id="detailValue" type="text" placeholder="YYYY-MM o YYYY-MM-DD" />
+        </div>
+      </div>
+      <div class="detail-grid">
+        <div class="box"><div class="value" id="detailEntries">0</div><div class="label">Entradas</div></div>
+        <div class="box"><div class="value" id="detailExits">0</div><div class="label">Salidas</div></div>
+        <div class="box"><div class="value" id="detailReturns">0</div><div class="label">Regresos</div></div>
+        <div class="box"><div class="value" id="detailHours">0h 0m</div><div class="label">Tiempo fuera</div></div>
+      </div>
+      <div class="detail-list">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Hora</th>
+              <th>Tipo</th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody id="detailBody">
+            <tr><td colspan="4">Busca un funcionario para ver su detalle.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const loginScreen = document.getElementById('loginScreen');
+    const appShell = document.getElementById('appShell');
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPassword = document.getElementById('loginPassword');
+    const loginBtn = document.getElementById('loginBtn');
+    const showPasswordCheck = document.getElementById('showPasswordCheck');
+    const rememberCheck = document.getElementById('rememberCheck');
+    const authNote = document.getElementById('authNote');
+    const searchFuncionario = document.getElementById('searchFuncionario');
+    const employeeList = document.getElementById('employeeList');
+    const mainScreen = document.getElementById('mainScreen');
+    const addEmployeeScreen = document.getElementById('addEmployeeScreen');
+    const monthlyScreen = document.getElementById('monthlyScreen');
+    const detailScreen = document.getElementById('detailScreen');
+    const goMainBtn = document.getElementById('goMainBtn');
+    const goAddBtn = document.getElementById('goAddBtn');
+    const goMonthlyBtn = document.getElementById('goMonthlyBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const fecha = document.getElementById('fecha');
+    const salidaHora = document.getElementById('salidaHora');
+    const entradaHora = document.getElementById('entradaHora');
+    const statusEl = document.getElementById('status');
+    const newEmployee = document.getElementById('newEmployee');
+    const addEmployeeBtn = document.getElementById('addEmployeeBtn');
+    const monthlyEmployee = document.getElementById('monthlyEmployee');
+    const employeeListMonthly = document.getElementById('employeeListMonthly');
+    const monthlyValue = document.getElementById('monthlyValue');
+    const searchMonthlyBtn = document.getElementById('searchMonthlyBtn');
+    const monthlyDetailBody = document.getElementById('monthlyDetailBody');
+    const detailMode = document.getElementById('detailMode');
+    const detailValue = document.getElementById('detailValue');
+    const detailBody = document.getElementById('detailBody');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailSubtitle = document.getElementById('detailSubtitle');
+    const detailEntries = document.getElementById('detailEntries');
+    const detailExits = document.getElementById('detailExits');
+    const detailReturns = document.getElementById('detailReturns');
+    const detailHours = document.getElementById('detailHours');
+    const backBtn = document.getElementById('backBtn');
+    const backMonthlyBtn = document.getElementById('backMonthlyBtn');
+    const runDetailBtn = document.getElementById('runDetailBtn');
+
+    const today = new Date();
+    const AUTH_EMAIL = 'alejandra.rodriguez@escuelaoriente.cl';
+    const AUTH_PASSWORD = 'oriente22380';
+    function getRememberedEmail() {
+      return localStorage.getItem('nec_remembered_email') || '';
+    }
+
+    function isLoggedIn() {
+      return sessionStorage.getItem('nec_logged_in') === '1';
+    }
+
+    function setLoggedIn(value) {
+      sessionStorage.setItem('nec_logged_in', value ? '1' : '0');
+    }
+
+    function showApp() {
+      loginScreen.classList.remove('active');
+      appShell.classList.add('active');
+      showScreen(mainScreen);
+    }
+
+    function showLogin() {
+      appShell.classList.remove('active');
+      loginScreen.classList.add('active');
+    }
+
+    function logout() {
+      setLoggedIn(false);
+      loginPassword.value = '';
+      showLogin();
+      authNote.textContent = 'Sesión cerrada correctamente.';
+      authNote.style.color = 'var(--muted)';
+    }
+
+    function attemptLogin() {
+      const email = loginEmail.value.trim().toLowerCase();
+      const password = loginPassword.value;
+      if (email === AUTH_EMAIL && password === AUTH_PASSWORD) {
+        setLoggedIn(true);
+        if (rememberCheck.checked) {
+          localStorage.setItem('nec_remembered_email', loginEmail.value.trim());
+        } else {
+          localStorage.removeItem('nec_remembered_email');
+        }
+        showApp();
+        return;
+      }
+      authNote.textContent = 'Correo o contraseña incorrectos.';
+      authNote.style.color = '#a33b3b';
+    }
+
+    loginEmail.value = getRememberedEmail();
+    fecha.value = today.toISOString().slice(0, 10);
+    salidaHora.value = today.toTimeString().slice(0, 5);
+    entradaHora.value = today.toTimeString().slice(0, 5);
+
+    function setStatus(msg) { statusEl.textContent = msg; }
+
+    function fillEmployees(list) {
+      employeeList.innerHTML = list.map(name => `<option value="${name}"></option>`).join('');
+      employeeListMonthly.innerHTML = list.map(name => `<option value="${name}"></option>`).join('');
+      if (!searchFuncionario.value) searchFuncionario.value = list[0] || '';
+      if (!monthlyEmployee.value) monthlyEmployee.value = list[0] || '';
+    }
+
+    function showScreen(screen) {
+      [mainScreen, addEmployeeScreen, monthlyScreen, detailScreen].forEach(el => el.classList.remove('active'));
+      screen.classList.add('active');
+    }
+
+    goMainBtn.addEventListener('click', () => showScreen(mainScreen));
+    goAddBtn.addEventListener('click', () => showScreen(addEmployeeScreen));
+    goMonthlyBtn.addEventListener('click', () => showScreen(monthlyScreen));
+    logoutBtn.addEventListener('click', logout);
+
+    function loadEmployees() {
+      const dbIndicator = document.getElementById('dbIndicator');
+      dbIndicator.textContent = 'Conectando con Google Sheets...';
+      google.script.run
+        .withSuccessHandler(list => {
+          fillEmployees(list);
+          dbIndicator.innerHTML = '<span class="db-dot"></span>Conectado con Google Sheets';
+        })
+        .withFailureHandler(err => {
+          setStatus(err.message || String(err));
+          dbIndicator.innerHTML = '<span class="db-dot" style="background:#a33b3b; box-shadow:0 0 0 4px rgba(163,59,59,.16);"></span>Sin conexión';
+        })
+        .getEmployees();
+    }
+
+    showPasswordCheck.addEventListener('change', () => {
+      loginPassword.type = showPasswordCheck.checked ? 'text' : 'password';
+    });
+
+    loginBtn.addEventListener('click', attemptLogin);
+    loginPassword.addEventListener('keydown', e => {
+      if (e.key === 'Enter') attemptLogin();
+    });
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      setStatus('Guardando...');
+      google.script.run
+        .withSuccessHandler(res => {
+          setStatus(res.message || 'Registro guardado exitosamente.');
+          form.reset();
+          fecha.value = today.toISOString().slice(0, 10);
+          salidaHora.value = new Date().toTimeString().slice(0, 5);
+          entradaHora.value = new Date().toTimeString().slice(0, 5);
+        })
+        .withFailureHandler(err => setStatus(err.message || String(err)))
+        .savePairedRecord({
+          funcionario: searchFuncionario.value,
+          fecha: fecha.value,
+          salidaHora: salidaHora.value,
+          regresoHora: entradaHora.value,
+          motivo: document.getElementById('motivo').value
+        });
+    });
+
+    addEmployeeBtn.addEventListener('click', () => {
+      const name = newEmployee.value.trim();
+      if (!name) return setStatus('Escribe el nombre del funcionario.');
+      setStatus('Agregando funcionario...');
+      google.script.run
+        .withSuccessHandler(res => {
+          setStatus(res.message || 'Funcionario agregado');
+          newEmployee.value = '';
+          loadEmployees();
+        })
+        .withFailureHandler(err => setStatus(err.message || String(err)))
+        .addEmployee(name);
+    });
+
+    function loadDetail() {
+      const name = detailScreen.classList.contains('active') ? searchFuncionario.value.trim() : monthlyEmployee.value.trim();
+      if (!name) return;
+      detailTitle.textContent = `Detalle de ${name}`;
+      detailSubtitle.textContent = detailMode.value === 'day'
+        ? `Detalle del día ${detailValue.value}`
+        : `Detalle del mes ${detailValue.value}`;
+      google.script.run
+        .withSuccessHandler(res => {
+          const s = res.summary || {};
+          detailEntries.textContent = String(s.entries || 0);
+          detailExits.textContent = String(s.exits || 0);
+          detailReturns.textContent = String(s.returns || 0);
+          detailHours.textContent = s.totalHours || '0h 0m';
+          const items = res.items || [];
+          if (!items.length) {
+            detailBody.innerHTML = '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+            return;
+          }
+          detailBody.innerHTML = items.map(item => `
+            <tr>
+              <td>${item.fecha || ''}</td>
+              <td>${item.hora || ''}</td>
+              <td>${item.tipo || ''}</td>
+              <td>${item.motivo || ''}</td>
+            </tr>
+          `).join('');
+        })
+        .withFailureHandler(err => setStatus(err.message || String(err)))
+        .getEmployeeDetail(name, detailMode.value, detailValue.value);
+    }
+
+    function loadMonthlyDetail() {
+      const name = monthlyEmployee.value.trim();
+      if (!name) return setStatus('Escribe un funcionario para buscar el registro mensual.');
+      monthlyValue.value = monthlyValue.value || fecha.value.slice(0, 7);
+      google.script.run
+        .withSuccessHandler(res => {
+          const s = res.summary || {};
+          detailEntries.textContent = String(s.entries || 0);
+          detailExits.textContent = String(s.exits || 0);
+          detailReturns.textContent = String(s.returns || 0);
+          detailHours.textContent = s.totalHours || '0h 0m';
+          const items = res.items || [];
+          if (!items.length) {
+            monthlyDetailBody.innerHTML = '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+            return;
+          }
+          monthlyDetailBody.innerHTML = items.map(item => `
+            <tr>
+              <td>${item.fecha || ''}</td>
+              <td>${item.hora || ''}</td>
+              <td>${item.tipo || ''}</td>
+              <td>${item.motivo || ''}</td>
+            </tr>
+          `).join('');
+        })
+        .withFailureHandler(err => setStatus(err.message || String(err)))
+        .getEmployeeDetail(name, 'month', monthlyValue.value);
+    }
+
+    searchMonthlyBtn.addEventListener('click', () => {
+      showScreen(monthlyScreen);
+      loadMonthlyDetail();
+    });
+    backMonthlyBtn.addEventListener('click', () => showScreen(mainScreen));
+    backBtn.addEventListener('click', () => showScreen(mainScreen));
+    runDetailBtn.addEventListener('click', loadDetail);
+    detailMode.addEventListener('change', () => {
+      detailValue.value = detailMode.value === 'day' ? fecha.value : fecha.value.slice(0, 7);
+    });
+    monthlyEmployee.addEventListener('change', loadMonthlyDetail);
+
+    loadEmployees();
+
+    if (isLoggedIn()) {
+      showApp();
+    } else {
+      showLogin();
+    }
+  </script>
+</body>
+</html>
