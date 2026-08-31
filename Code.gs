@@ -260,7 +260,7 @@ function getTodayRecords(fecha) {
   return rows.map(row => ({
     timestamp: row[0],
     fecha: dateText_(row[1]),
-    hora: row[2],
+    hora: timeText_(row[2]),
     funcionario: row[3],
     tipo: row[4],
     motivo: row[5],
@@ -307,7 +307,7 @@ function getDailyRecordsByEmployee(funcionario, date) {
     .map(row => ({
       timestamp: row[0],
       fecha: dateText_(row[1]),
-      hora: row[2],
+      hora: timeText_(row[2]),
       funcionario: row[3],
       tipo: row[4],
       motivo: row[5],
@@ -415,7 +415,7 @@ function getEmployeeDetail(funcionario, mode, value) {
   return {
     items: filtered.map(row => ({
       fecha: dateText_(row[1]),
-      hora: row[2],
+      hora: timeText_(row[2]),
       funcionario: row[3],
       tipo: row[4],
       motivo: row[5]
