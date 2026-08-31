@@ -748,14 +748,7 @@
           setStatus(res.message || 'Funcionario agregado');
           newEmployee.value = '';
           loadEmployees();
-        }, err => loadLocalRecords(() => {
-          const res = localEmployeeDetail(monthlyEmployee.value, 'month', monthlyValue.value);
-          detailEntries.textContent = String(res.summary.entries);
-          detailExits.textContent = String(res.summary.exits);
-          detailReturns.textContent = String(res.summary.returns);
-          detailHours.textContent = res.summary.totalHours;
-          monthlyDetailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
-        }, () => setStatus(err.message || String(err))));
+        }, err => setStatus(err.message || String(err)));
     });
 
     function loadDetail() {
@@ -784,7 +777,14 @@
               <td>${item.motivo || ''}</td>
             </tr>
           `).join('');
-        }, err => setStatus(err.message || String(err)));
+        }, err => loadLocalRecords(() => {
+          const res = localEmployeeDetail(searchFuncionario.value, detailMode.value, detailValue.value);
+          detailEntries.textContent = String(res.summary.entries);
+          detailExits.textContent = String(res.summary.exits);
+          detailReturns.textContent = String(res.summary.returns);
+          detailHours.textContent = res.summary.totalHours;
+          detailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+        }, () => setStatus(err.message || String(err))));
     }
 
     function loadMonthlyDetail() {
@@ -810,7 +810,14 @@
               <td>${item.motivo || ''}</td>
             </tr>
           `).join('');
-        }, err => setStatus(err.message || String(err)));
+        }, err => loadLocalRecords(() => {
+          const res = localEmployeeDetail(monthlyEmployee.value, 'month', monthlyValue.value);
+          detailEntries.textContent = String(res.summary.entries);
+          detailExits.textContent = String(res.summary.exits);
+          detailReturns.textContent = String(res.summary.returns);
+          detailHours.textContent = res.summary.totalHours;
+          monthlyDetailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+        }, () => setStatus(err.message || String(err))));
     }
 
     searchMonthlyBtn.addEventListener('click', () => {
