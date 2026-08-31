@@ -540,6 +540,8 @@
     const today = new Date();
     const AUTH_EMAIL = 'alejandra.rodriguez@escuelaoriente.cl';
     const AUTH_PASSWORD = 'oriente22380';
+    // Pega aquí la URL de implementación de Apps Script para conectar GitHub con Sheets.
+    const GOOGLE_SHEETS_API_URL = '';
     function getRememberedEmail() {
       return localStorage.getItem('nec_remembered_email') || '';
     }
@@ -595,6 +597,34 @@
 
     function setStatus(msg) { statusEl.textContent = msg; }
 
+    function callBackend(action, params, success, failure) {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        return google.script.run.withSuccessHandler(success).withFailureHandler(failure)[action](...(params || []));
+      }
+      if (!GOOGLE_SHEETS_API_URL) {
+        failure(new Error('Falta configurar la URL de Google Apps Script.'));
+        return;
+      }
+      const callbackName = `sheetsCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const query = new URLSearchParams({ action, callback: callbackName });
+      const keys = action === 'getEmployees' ? [] : action === 'addEmployee' ? ['name'] : action === 'savePairedRecord'
+        ? ['funcionario', 'fecha', 'salidaHora', 'regresoHora', 'motivo'] : ['funcionario', 'mode', 'value'];
+      (params || []).forEach((value, index) => query.set(keys[index], value ?? ''));
+      const script = document.createElement('script');
+      window[callbackName] = data => {
+        delete window[callbackName];
+        script.remove();
+        if (data && data.error) failure(new Error(data.error)); else success(data);
+      };
+      script.onerror = () => {
+        delete window[callbackName];
+        script.remove();
+        failure(new Error('No se pudo conectar con Google Sheets.'));
+      };
+      script.src = `${GOOGLE_SHEETS_API_URL}?${query.toString()}`;
+      document.head.appendChild(script);
+    }
+
     function fillEmployees(list) {
       employeeList.innerHTML = list.map(name => `<option value="${name}"></option>`).join('');
       employeeListMonthly.innerHTML = list.map(name => `<option value="${name}"></option>`).join('');
@@ -615,16 +645,13 @@
     function loadEmployees() {
       const dbIndicator = document.getElementById('dbIndicator');
       dbIndicator.textContent = 'Conectando con Google Sheets...';
-      google.script.run
-        .withSuccessHandler(list => {
+      callBackend('getEmployees', [], list => {
           fillEmployees(list);
           dbIndicator.innerHTML = '<span class="db-dot"></span>Conectado con Google Sheets';
-        })
-        .withFailureHandler(err => {
+        }, err => {
           setStatus(err.message || String(err));
           dbIndicator.innerHTML = '<span class="db-dot" style="background:#a33b3b; box-shadow:0 0 0 4px rgba(163,59,59,.16);"></span>Sin conexión';
-        })
-        .getEmployees();
+        });
     }
 
     showPasswordCheck.addEventListener('change', () => {
@@ -639,36 +666,30 @@
     form.addEventListener('submit', e => {
       e.preventDefault();
       setStatus('Guardando...');
-      google.script.run
-        .withSuccessHandler(res => {
+      callBackend('savePairedRecord', [
+        searchFuncionario.value,
+        fecha.value,
+        salidaHora.value,
+        entradaHora.value,
+        document.getElementById('motivo').value
+      ], res => {
           setStatus(res.message || 'Registro guardado exitosamente.');
           form.reset();
           fecha.value = today.toISOString().slice(0, 10);
           salidaHora.value = new Date().toTimeString().slice(0, 5);
           entradaHora.value = new Date().toTimeString().slice(0, 5);
-        })
-        .withFailureHandler(err => setStatus(err.message || String(err)))
-        .savePairedRecord({
-          funcionario: searchFuncionario.value,
-          fecha: fecha.value,
-          salidaHora: salidaHora.value,
-          regresoHora: entradaHora.value,
-          motivo: document.getElementById('motivo').value
-        });
+        }, err => setStatus(err.message || String(err)));
     });
 
     addEmployeeBtn.addEventListener('click', () => {
       const name = newEmployee.value.trim();
       if (!name) return setStatus('Escribe el nombre del funcionario.');
       setStatus('Agregando funcionario...');
-      google.script.run
-        .withSuccessHandler(res => {
+      callBackend('addEmployee', [name], res => {
           setStatus(res.message || 'Funcionario agregado');
           newEmployee.value = '';
           loadEmployees();
-        })
-        .withFailureHandler(err => setStatus(err.message || String(err)))
-        .addEmployee(name);
+        }, err => setStatus(err.message || String(err)));
     });
 
     function loadDetail() {
@@ -678,8 +699,7 @@
       detailSubtitle.textContent = detailMode.value === 'day'
         ? `Detalle del día ${detailValue.value}`
         : `Detalle del mes ${detailValue.value}`;
-      google.script.run
-        .withSuccessHandler(res => {
+      callBackend('getEmployeeDetail', [name, detailMode.value, detailValue.value], res => {
           const s = res.summary || {};
           detailEntries.textContent = String(s.entries || 0);
           detailExits.textContent = String(s.exits || 0);
@@ -698,17 +718,14 @@
               <td>${item.motivo || ''}</td>
             </tr>
           `).join('');
-        })
-        .withFailureHandler(err => setStatus(err.message || String(err)))
-        .getEmployeeDetail(name, detailMode.value, detailValue.value);
+        }, err => setStatus(err.message || String(err)));
     }
 
     function loadMonthlyDetail() {
       const name = monthlyEmployee.value.trim();
       if (!name) return setStatus('Escribe un funcionario para buscar el registro mensual.');
       monthlyValue.value = monthlyValue.value || fecha.value.slice(0, 7);
-      google.script.run
-        .withSuccessHandler(res => {
+      callBackend('getEmployeeDetail', [name, 'month', monthlyValue.value], res => {
           const s = res.summary || {};
           detailEntries.textContent = String(s.entries || 0);
           detailExits.textContent = String(s.exits || 0);
@@ -727,9 +744,7 @@
               <td>${item.motivo || ''}</td>
             </tr>
           `).join('');
-        })
-        .withFailureHandler(err => setStatus(err.message || String(err)))
-        .getEmployeeDetail(name, 'month', monthlyValue.value);
+        }, err => setStatus(err.message || String(err)));
     }
 
     searchMonthlyBtn.addEventListener('click', () => {
