@@ -89,6 +89,25 @@ function syncLegacyRecords() {
   return { ok: true, rows: newRows.length, message: `${newRows.length} registros históricos sincronizados.` };
 }
 
+function deduplicateRecords() {
+  const { sheet } = ensureDatabase_();
+  if (sheet.getLastRow() < 2) return { ok: true, removed: 0, message: 'No hay registros para limpiar.' };
+  const values = sheet.getDataRange().getValues();
+  const seen = new Set();
+  const kept = [values[0]];
+  values.slice(1).forEach(row => {
+    const key = [dateText_(row[1]), timeText_(row[2]), String(row[3] || '').trim().toLowerCase(), String(row[4] || '').trim().toLowerCase(), String(row[5] || '').trim().toLowerCase()].join('|');
+    if (!seen.has(key)) {
+      seen.add(key);
+      kept.push(row);
+    }
+  });
+  sheet.clearContents();
+  sheet.getRange(1, 1, kept.length, kept[0].length).setValues(kept);
+  sheet.setFrozenRows(1);
+  return { ok: true, removed: values.length - kept.length, message: `${values.length - kept.length} duplicados eliminados.` };
+}
+
 function ensureDatabase_() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = ss.getSheetByName(SHEET_NAME);
@@ -233,7 +252,7 @@ function getMonthlyRecords(funcionario, month) {
     .map(row => ({
       timestamp: row[0],
       fecha: dateText_(row[1]),
-      hora: row[2],
+      hora: timeText_(row[2]),
       funcionario: row[3],
       tipo: row[4],
       motivo: row[5],
@@ -387,6 +406,13 @@ function timeToMinutes(value) {
     }
   }
   return 0;
+}
+
+function timeText_(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'HH:mm');
+  const text = String(value || '').trim();
+  const match = text.match(/(\d{1,2}):(\d{2})/);
+  return match ? `${String(match[1]).padStart(2, '0')}:${match[2]}` : text;
 }
 
 function dateText_(value) {
