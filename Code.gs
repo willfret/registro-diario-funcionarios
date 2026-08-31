@@ -27,6 +27,7 @@ function apiResponse_(request) {
     motivo: p.motivo
   });
   else if (action === 'getEmployeeDetail') data = getEmployeeDetail(p.funcionario, p.mode, p.value);
+  else if (action === 'getAllRecords') data = getAllRecords();
   else throw new Error('Acción no reconocida.');
 
   const callback = String(p.callback || 'callback').replace(/[^a-zA-Z0-9_$]/g, '');
@@ -87,6 +88,22 @@ function syncLegacyRecords() {
   }).map(row => [new Date(), row[0], row[1], row[2], row[3], row[4], row[5]]);
   if (newRows.length) sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 7).setValues(newRows);
   return { ok: true, rows: newRows.length, message: `${newRows.length} registros históricos sincronizados.` };
+}
+
+function replaceImportedRecords() {
+  const response = UrlFetchApp.fetch(LEGACY_RECORDS_CSV_URL, { muteHttpExceptions: true });
+  if (response.getResponseCode() !== 200) throw new Error('No se pudo leer el Excel sincronizado.');
+  const rows = Utilities.parseCsv(response.getContentText()).slice(1).filter(row => row.length >= 6);
+  const { sheet } = ensureDatabase_();
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0] || ['Timestamp', 'Fecha', 'Hora', 'Funcionario', 'Tipo', 'Motivo', 'Usuario'];
+  const currentRecords = values.slice(1).filter(row => String(row[5] || '').trim() !== 'Registro importado del Excel');
+  const importedRecords = rows.map(row => [new Date(), row[0], row[1], row[2], row[3], row[4], row[5]]);
+  const output = [headers].concat(currentRecords, importedRecords);
+  sheet.clearContents();
+  sheet.getRange(1, 1, output.length, output[0].length).setValues(output);
+  sheet.setFrozenRows(1);
+  return { ok: true, rows: importedRecords.length, preserved: currentRecords.length, message: `${importedRecords.length} registros del Excel reemplazados; ${currentRecords.length} registros nuevos conservados.` };
 }
 
 function deduplicateRecords() {
@@ -393,6 +410,19 @@ function getEmployeeDetail(funcionario, mode, value) {
       totalHours: formatMinutes(totalMinutes)
     }
   };
+}
+
+function getAllRecords() {
+  const { sheet } = ensureDatabase_();
+  if (sheet.getLastRow() < 2) return [];
+  return sheet.getDataRange().getValues().slice(1).map(row => ({
+    fecha: dateText_(row[1]),
+    hora: timeText_(row[2]),
+    funcionario: row[3],
+    tipo: row[4],
+    motivo: row[5],
+    usuario: row[6]
+  }));
 }
 
 function timeToMinutes(value) {
