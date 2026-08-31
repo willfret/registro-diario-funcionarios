@@ -544,7 +544,6 @@
     const detailHours = document.getElementById('detailHours');
     const backBtn = document.getElementById('backBtn');
     const backMonthlyBtn = document.getElementById('backMonthlyBtn');
-    const runDetailBtn = document.getElementById('runDetailBtn');
 
     const today = new Date();
     const AUTH_EMAIL = 'alejandra.rodriguez@escuelaoriente.cl';
@@ -765,7 +764,6 @@
     });
     backMonthlyBtn.addEventListener('click', () => showScreen(mainScreen));
     backBtn.addEventListener('click', () => showScreen(mainScreen));
-    runDetailBtn.addEventListener('click', loadDetail);
     detailMode.addEventListener('change', () => {
       detailValue.value = detailMode.value === 'day' ? fecha.value : fecha.value.slice(0, 7);
     });
