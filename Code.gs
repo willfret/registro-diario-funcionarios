@@ -467,7 +467,7 @@ function getMonthlyRanking(month) {
     totalMinutes: ranking.reduce((sum, item) => sum + item.totalMinutes, 0),
     totalHours: formatMinutes(ranking.reduce((sum, item) => sum + item.totalMinutes, 0)),
     totalExits: ranking.reduce((sum, item) => sum + item.exits, 0),
-    ranking: ranking.slice(0, 5)
+    ranking
   };
 }
 

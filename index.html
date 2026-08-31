@@ -446,12 +446,17 @@
         <div class="box"><div class="value" id="monthlyAllHours">0h 0m</div><div class="label">Tiempo total de todos en el mes</div></div>
         <div class="box"><div class="value" id="monthlyAllExits">0</div><div class="label">Salidas totales del mes</div></div>
       </div>
-      <div class="detail-list" style="margin-top:14px;">
-        <h3 style="margin:0 0 10px;">Ranking: mayor tiempo fuera</h3>
-        <table>
-          <thead><tr><th>#</th><th>Funcionario</th><th>Salidas</th><th>Tiempo fuera</th></tr></thead>
-          <tbody id="monthlyRankingBody"><tr><td colspan="4">Selecciona un mes para ver el ranking.</td></tr></tbody>
-        </table>
+      <div style="margin-top:14px;">
+        <button type="button" class="secondary" id="monthlyRankingToggle">Funcionarios con más tiempo en el mes</button>
+        <div id="monthlyRankingPanel" hidden style="margin-top:12px;">
+          <h3 style="margin:0 0 10px;">Funcionarios ordenados por tiempo fuera</h3>
+          <div class="detail-list">
+            <table>
+              <thead><tr><th>#</th><th>Funcionario</th><th>Salidas</th><th>Tiempo fuera</th></tr></thead>
+              <tbody id="monthlyRankingBody"><tr><td colspan="4">Selecciona un mes para ver la lista.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <div class="detail-list">
         <table>
@@ -563,6 +568,8 @@
     const monthlyAllHours = document.getElementById('monthlyAllHours');
     const monthlyAllExits = document.getElementById('monthlyAllExits');
     const monthlyRankingBody = document.getElementById('monthlyRankingBody');
+    const monthlyRankingToggle = document.getElementById('monthlyRankingToggle');
+    const monthlyRankingPanel = document.getElementById('monthlyRankingPanel');
     const backBtn = document.getElementById('backBtn');
     const backMonthlyBtn = document.getElementById('backMonthlyBtn');
     let currentMonthlyReport = null;
@@ -705,13 +712,15 @@
         });
         return { funcionario: name, exits, totalMinutes, totalHours: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` };
       }).sort((a, b) => b.totalMinutes - a.totalMinutes || b.exits - a.exits || a.funcionario.localeCompare(b.funcionario));
-      return { totalMinutes: ranking.reduce((sum, item) => sum + item.totalMinutes, 0), totalHours: `${Math.floor(ranking.reduce((sum, item) => sum + item.totalMinutes, 0) / 60)}h ${ranking.reduce((sum, item) => sum + item.totalMinutes, 0) % 60}m`, totalExits: ranking.reduce((sum, item) => sum + item.exits, 0), ranking: ranking.slice(0, 5) };
+      return { totalMinutes: ranking.reduce((sum, item) => sum + item.totalMinutes, 0), totalHours: `${Math.floor(ranking.reduce((sum, item) => sum + item.totalMinutes, 0) / 60)}h ${ranking.reduce((sum, item) => sum + item.totalMinutes, 0) % 60}m`, totalExits: ranking.reduce((sum, item) => sum + item.exits, 0), ranking };
     }
 
     function renderMonthlyRanking(result) {
       const data = result || { totalHours: '0h 0m', totalExits: 0, ranking: [] };
       monthlyAllHours.textContent = data.totalHours || '0h 0m';
       monthlyAllExits.textContent = String(data.totalExits || 0);
+      monthlyRankingPanel.hidden = true;
+      monthlyRankingToggle.textContent = 'Funcionarios con más tiempo en el mes';
       monthlyRankingBody.innerHTML = data.ranking && data.ranking.length
         ? data.ranking.map((item, index) => `<tr><td>${index + 1}</td><td>${item.funcionario}</td><td>${item.exits}</td><td>${item.totalHours}</td></tr>`).join('')
         : '<tr><td colspan="4">No hay registros para este mes.</td></tr>';
@@ -976,6 +985,12 @@
     searchMonthlyBtn.addEventListener('click', () => {
       showScreen(monthlyScreen);
       loadMonthlyDetail();
+    });
+    monthlyRankingToggle.addEventListener('click', () => {
+      monthlyRankingPanel.hidden = !monthlyRankingPanel.hidden;
+      monthlyRankingToggle.textContent = monthlyRankingPanel.hidden
+        ? 'Funcionarios con más tiempo en el mes'
+        : 'Ocultar funcionarios con más tiempo';
     });
     downloadReportBtn.addEventListener('click', downloadReport);
     backMonthlyBtn.addEventListener('click', () => showScreen(mainScreen));
