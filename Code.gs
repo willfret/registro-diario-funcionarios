@@ -27,6 +27,7 @@ function apiResponse_(request) {
     motivo: p.motivo
   });
   else if (action === 'getEmployeeDetail') data = getEmployeeDetail(p.funcionario, p.mode, p.value);
+  else if (action === 'getMonthlyRanking') data = getMonthlyRanking(p.value);
   else if (action === 'getAllRecords') data = getAllRecords();
   else throw new Error('Acción no reconocida.');
 
@@ -427,6 +428,46 @@ function getEmployeeDetail(funcionario, mode, value) {
       totalMinutes,
       totalHours: formatMinutes(totalMinutes)
     }
+  };
+}
+
+function getMonthlyRanking(month) {
+  const { sheet } = ensureDatabase_();
+  if (sheet.getLastRow() < 2) return { month, totalMinutes: 0, totalHours: '0h 0m', totalExits: 0, ranking: [] };
+
+  const targetMonth = String(month || '').trim();
+  const grouped = {};
+  sheet.getDataRange().getValues().slice(1).forEach(row => {
+    if (!dateText_(row[1]).startsWith(targetMonth)) return;
+    const name = String(row[3] || '').trim();
+    if (!name) return;
+    if (!grouped[name]) grouped[name] = [];
+    grouped[name].push(row);
+  });
+
+  const ranking = Object.keys(grouped).map(name => {
+    const rows = grouped[name].sort((a, b) => dateText_(a[1]).localeCompare(dateText_(b[1])) || timeToMinutes(a[2]) - timeToMinutes(b[2]));
+    let totalMinutes = 0;
+    let exits = 0;
+    let lastExit = null;
+    let lastDate = '';
+    rows.forEach(row => {
+      const date = dateText_(row[1]);
+      if (date !== lastDate) { lastExit = null; lastDate = date; }
+      const type = String(row[4] || '').toLowerCase();
+      const minutes = timeToMinutes(row[2]);
+      if (type === 'salida' || type === 'salida final') { exits += 1; lastExit = minutes; }
+      else if (type === 'regreso' && lastExit !== null) { totalMinutes += Math.max(0, minutes - lastExit); lastExit = null; }
+    });
+    return { funcionario: name, exits, totalMinutes, totalHours: formatMinutes(totalMinutes) };
+  }).sort((a, b) => b.totalMinutes - a.totalMinutes || b.exits - a.exits || a.funcionario.localeCompare(b.funcionario));
+
+  return {
+    month: targetMonth,
+    totalMinutes: ranking.reduce((sum, item) => sum + item.totalMinutes, 0),
+    totalHours: formatMinutes(ranking.reduce((sum, item) => sum + item.totalMinutes, 0)),
+    totalExits: ranking.reduce((sum, item) => sum + item.exits, 0),
+    ranking: ranking.slice(0, 5)
   };
 }
 

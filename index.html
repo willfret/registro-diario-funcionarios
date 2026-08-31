@@ -442,6 +442,17 @@
         <div class="box"><div class="value" id="detailReturns">0</div><div class="label">Regresos</div></div>
         <div class="box"><div class="value" id="detailHours">0h 0m</div><div class="label">Tiempo fuera</div></div>
       </div>
+      <div class="detail-grid" style="margin-top:14px;">
+        <div class="box"><div class="value" id="monthlyAllHours">0h 0m</div><div class="label">Tiempo total de todos en el mes</div></div>
+        <div class="box"><div class="value" id="monthlyAllExits">0</div><div class="label">Salidas totales del mes</div></div>
+      </div>
+      <div class="detail-list" style="margin-top:14px;">
+        <h3 style="margin:0 0 10px;">Ranking: mayor tiempo fuera</h3>
+        <table>
+          <thead><tr><th>#</th><th>Funcionario</th><th>Salidas</th><th>Tiempo fuera</th></tr></thead>
+          <tbody id="monthlyRankingBody"><tr><td colspan="4">Selecciona un mes para ver el ranking.</td></tr></tbody>
+        </table>
+      </div>
       <div class="detail-list">
         <table>
           <thead>
@@ -549,6 +560,9 @@
     const detailExits = document.getElementById('detailExits');
     const detailReturns = document.getElementById('detailReturns');
     const detailHours = document.getElementById('detailHours');
+    const monthlyAllHours = document.getElementById('monthlyAllHours');
+    const monthlyAllExits = document.getElementById('monthlyAllExits');
+    const monthlyRankingBody = document.getElementById('monthlyRankingBody');
     const backBtn = document.getElementById('backBtn');
     const backMonthlyBtn = document.getElementById('backMonthlyBtn');
     let currentMonthlyReport = null;
@@ -670,6 +684,43 @@
       return [...new Set((localRecords || []).map(row => String(row.fecha || '').slice(0, 7)).filter(Boolean))].sort().pop() || '';
     }
 
+    function localMonthlyRanking(month) {
+      const groups = {};
+      (localRecords || []).filter(row => String(row.fecha || '').startsWith(month)).forEach(row => {
+        const name = String(row.funcionario || '').trim();
+        if (!name) return;
+        if (!groups[name]) groups[name] = [];
+        groups[name].push(row);
+      });
+      const ranking = Object.keys(groups).map(name => {
+        const rows = groups[name].sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`));
+        let totalMinutes = 0, exits = 0, lastExit = null, lastDate = '';
+        rows.forEach(row => {
+          if (row.fecha !== lastDate) { lastExit = null; lastDate = row.fecha; }
+          const parts = String(row.hora || '').split(':');
+          const minutes = Number(parts[0]) * 60 + Number(parts[1]);
+          const type = String(row.tipo || '').toLowerCase();
+          if (type === 'salida' || type === 'salida final') { exits += 1; lastExit = minutes; }
+          else if (type === 'regreso' && lastExit !== null) { totalMinutes += Math.max(0, minutes - lastExit); lastExit = null; }
+        });
+        return { funcionario: name, exits, totalMinutes, totalHours: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` };
+      }).sort((a, b) => b.totalMinutes - a.totalMinutes || b.exits - a.exits || a.funcionario.localeCompare(b.funcionario));
+      return { totalMinutes: ranking.reduce((sum, item) => sum + item.totalMinutes, 0), totalHours: `${Math.floor(ranking.reduce((sum, item) => sum + item.totalMinutes, 0) / 60)}h ${ranking.reduce((sum, item) => sum + item.totalMinutes, 0) % 60}m`, totalExits: ranking.reduce((sum, item) => sum + item.exits, 0), ranking: ranking.slice(0, 5) };
+    }
+
+    function renderMonthlyRanking(result) {
+      const data = result || { totalHours: '0h 0m', totalExits: 0, ranking: [] };
+      monthlyAllHours.textContent = data.totalHours || '0h 0m';
+      monthlyAllExits.textContent = String(data.totalExits || 0);
+      monthlyRankingBody.innerHTML = data.ranking && data.ranking.length
+        ? data.ranking.map((item, index) => `<tr><td>${index + 1}</td><td>${item.funcionario}</td><td>${item.exits}</td><td>${item.totalHours}</td></tr>`).join('')
+        : '<tr><td colspan="4">No hay registros para este mes.</td></tr>';
+    }
+
+    function loadMonthlyRanking(month) {
+      callBackend('getMonthlyRanking', [month], result => renderMonthlyRanking(result), () => loadLocalRecords(records => { localRecords = records; renderMonthlyRanking(localMonthlyRanking(month)); }, () => renderMonthlyRanking(null)));
+    }
+
     function displayTime(value) {
       const text = String(value || '');
       const iso = text.match(/T(\d{2}):(\d{2})/);
@@ -749,7 +800,7 @@
       const callbackName = `sheetsCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const query = new URLSearchParams({ action, callback: callbackName });
       const keys = action === 'getEmployees' ? [] : action === 'addEmployee' ? ['name'] : action === 'savePairedRecord'
-        ? ['funcionario', 'fecha', 'salidaHora', 'regresoHora', 'motivo'] : ['funcionario', 'mode', 'value'];
+        ? ['funcionario', 'fecha', 'salidaHora', 'regresoHora', 'motivo'] : action === 'getMonthlyRanking' ? ['value'] : ['funcionario', 'mode', 'value'];
       (params || []).forEach((value, index) => query.set(keys[index], value ?? ''));
       const script = document.createElement('script');
       window[callbackName] = data => {
@@ -884,6 +935,7 @@
       if (!name) return setStatus('Escribe un funcionario para buscar el registro mensual.');
       setMonthlySearching(true);
       monthlyValue.value = monthlyValue.value || latestLocalMonth() || fecha.value.slice(0, 7);
+      loadMonthlyRanking(monthlyValue.value);
       callBackend('getEmployeeDetail', [name, 'month', monthlyValue.value], res => {
           setMonthlySearching(false);
           if (!res || !res.items || !res.items.length) {
