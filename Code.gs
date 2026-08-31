@@ -201,11 +201,11 @@ function getTodayRecords(fecha) {
   const tz = Session.getScriptTimeZone();
   const target = fecha || Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   const values = sheet.getDataRange().getValues();
-  const rows = values.slice(1).filter(row => String(row[1]) === target);
+  const rows = values.slice(1).filter(row => dateText_(row[1]) === target);
 
   return rows.map(row => ({
     timestamp: row[0],
-    fecha: row[1],
+    fecha: dateText_(row[1]),
     hora: row[2],
     funcionario: row[3],
     tipo: row[4],
@@ -225,14 +225,14 @@ function getMonthlyRecords(funcionario, month) {
 
   return values
     .filter(row => {
-      const rowDate = row[1] ? String(row[1]) : '';
+      const rowDate = dateText_(row[1]);
       const matchesMonth = rowDate.startsWith(targetMonth);
       const matchesName = !nameFilter || String(row[3] || '').toLowerCase().includes(nameFilter);
       return matchesMonth && matchesName;
     })
     .map(row => ({
       timestamp: row[0],
-      fecha: row[1],
+      fecha: dateText_(row[1]),
       hora: row[2],
       funcionario: row[3],
       tipo: row[4],
@@ -249,10 +249,10 @@ function getDailyRecordsByEmployee(funcionario, date) {
   const targetDate = date || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   const nameFilter = (funcionario || '').trim().toLowerCase();
   return sheet.getDataRange().getValues().slice(1)
-    .filter(row => String(row[1]) === targetDate && String(row[3] || '').toLowerCase().includes(nameFilter))
+    .filter(row => dateText_(row[1]) === targetDate && String(row[3] || '').toLowerCase().includes(nameFilter))
     .map(row => ({
       timestamp: row[0],
-      fecha: row[1],
+      fecha: dateText_(row[1]),
       hora: row[2],
       funcionario: row[3],
       tipo: row[4],
@@ -271,7 +271,7 @@ function getSummary(funcionario, date) {
   const targetDate = date || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   const nameFilter = (funcionario || '').trim().toLowerCase();
   const rows = sheet.getDataRange().getValues().slice(1)
-    .filter(row => String(row[3] || '').toLowerCase().includes(nameFilter) && String(row[1]) <= targetDate)
+    .filter(row => String(row[3] || '').toLowerCase().includes(nameFilter) && dateText_(row[1]) <= targetDate)
     .sort((a, b) => String(a[1]).localeCompare(String(b[1])) || timeToMinutes(a[2]) - timeToMinutes(b[2]));
 
   let totalMinutes = 0;
@@ -300,7 +300,7 @@ function getMonthlySummary(funcionario, month) {
   const targetMonth = month || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM');
   const nameFilter = (funcionario || '').trim().toLowerCase();
   const rows = sheet.getDataRange().getValues().slice(1)
-    .filter(row => String(row[1] || '').startsWith(targetMonth) && String(row[3] || '').toLowerCase().includes(nameFilter))
+    .filter(row => dateText_(row[1]).startsWith(targetMonth) && String(row[3] || '').toLowerCase().includes(nameFilter))
     .sort((a, b) => String(a[1]).localeCompare(String(b[1])) || timeToMinutes(a[2]) - timeToMinutes(b[2]));
 
   let totalMinutes = 0;
@@ -332,7 +332,7 @@ function getEmployeeDetail(funcionario, mode, value) {
   const rows = sheet.getDataRange().getValues().slice(1).filter(row => String(row[3] || '').toLowerCase().includes(targetName));
 
   const filtered = rows.filter(row => {
-    const rowDate = String(row[1] || '');
+    const rowDate = dateText_(row[1]);
     return targetMode === 'day' ? rowDate === targetValue : rowDate.startsWith(targetValue);
   }).sort((a, b) => String(a[1]).localeCompare(String(b[1])) || timeToMinutes(a[2]) - timeToMinutes(b[2]));
 
@@ -360,7 +360,7 @@ function getEmployeeDetail(funcionario, mode, value) {
 
   return {
     items: filtered.map(row => ({
-      fecha: row[1],
+      fecha: dateText_(row[1]),
       hora: row[2],
       funcionario: row[3],
       tipo: row[4],
@@ -387,6 +387,11 @@ function timeToMinutes(value) {
     }
   }
   return 0;
+}
+
+function dateText_(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return String(value || '').slice(0, 10);
 }
 
 function formatMinutes(totalMinutes) {
