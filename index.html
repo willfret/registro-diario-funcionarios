@@ -605,6 +605,44 @@
 
     function setStatus(msg) { statusEl.textContent = msg; }
 
+    let localRecords = null;
+
+    function loadLocalRecords(done, failed) {
+      if (localRecords) return done(localRecords);
+      fetch('legacy-records.csv?v=1')
+        .then(response => {
+          if (!response.ok) throw new Error('No se pudo leer el respaldo histórico.');
+          return response.text();
+        })
+        .then(text => {
+          localRecords = text.split(/\r?\n/).slice(1).filter(Boolean).map(line => {
+            const [fecha, hora, funcionario, tipo, motivo, usuario] = line.split(',');
+            return { fecha, hora, funcionario, tipo, motivo, usuario };
+          });
+          done(localRecords);
+        })
+        .catch(failed || (() => {}));
+    }
+
+    function localEmployeeDetail(name, mode, value) {
+      const target = String(name || '').trim().toLowerCase();
+      const rows = (localRecords || []).filter(row => {
+        const sameName = String(row.funcionario || '').toLowerCase().includes(target);
+        const samePeriod = mode === 'day' ? row.fecha === value : String(row.fecha || '').startsWith(value);
+        return sameName && samePeriod;
+      }).sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`));
+      let exits = 0, returns = 0, entries = 0, totalMinutes = 0, lastExit = null;
+      rows.forEach(row => {
+        const parts = String(row.hora || '').split(':');
+        const minutes = Number(parts[0]) * 60 + Number(parts[1]);
+        const type = String(row.tipo || '').toLowerCase();
+        if (type === 'entrada') entries += 1;
+        if (type === 'salida' || type === 'salida final') { exits += 1; lastExit = minutes; }
+        if (type === 'regreso') { returns += 1; if (lastExit !== null) { totalMinutes += Math.max(0, minutes - lastExit); lastExit = null; } }
+      });
+      return { items: rows, summary: { entries, exits, returns, totalMinutes, totalHours: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` } };
+    }
+
     function callBackend(action, params, success, failure) {
       if (typeof google !== 'undefined' && google.script && google.script.run) {
         return google.script.run.withSuccessHandler(success).withFailureHandler(failure)[action](...(params || []));
@@ -659,9 +697,12 @@
           dbIndicator.classList.remove('disconnected');
           dbIndicator.innerHTML = '<span class="db-dot"></span>Conectado con Google Sheets';
         }, err => {
-          setStatus(err.message || String(err));
           dbIndicator.classList.add('disconnected');
           dbIndicator.innerHTML = '<span class="db-dot" style="background:#a33b3b; box-shadow:0 0 0 4px rgba(163,59,59,.16);"></span>Sin conexión';
+          loadLocalRecords(records => {
+            fillEmployees([...new Set(records.map(row => row.funcionario).filter(Boolean))].sort());
+            setStatus('Google Sheets no disponible. Mostrando registros históricos del Excel.');
+          }, () => setStatus(err.message || String(err)));
         });
     }
 
@@ -689,7 +730,14 @@
           fecha.value = today.toISOString().slice(0, 10);
           salidaHora.value = new Date().toTimeString().slice(0, 5);
           entradaHora.value = new Date().toTimeString().slice(0, 5);
-        }, err => setStatus(err.message || String(err)));
+        }, err => loadLocalRecords(() => {
+          const res = localEmployeeDetail(searchFuncionario.value, detailMode.value, detailValue.value);
+          detailEntries.textContent = String(res.summary.entries);
+          detailExits.textContent = String(res.summary.exits);
+          detailReturns.textContent = String(res.summary.returns);
+          detailHours.textContent = res.summary.totalHours;
+          detailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+        }, () => setStatus(err.message || String(err))));
     });
 
     addEmployeeBtn.addEventListener('click', () => {
@@ -700,7 +748,14 @@
           setStatus(res.message || 'Funcionario agregado');
           newEmployee.value = '';
           loadEmployees();
-        }, err => setStatus(err.message || String(err)));
+        }, err => loadLocalRecords(() => {
+          const res = localEmployeeDetail(monthlyEmployee.value, 'month', monthlyValue.value);
+          detailEntries.textContent = String(res.summary.entries);
+          detailExits.textContent = String(res.summary.exits);
+          detailReturns.textContent = String(res.summary.returns);
+          detailHours.textContent = res.summary.totalHours;
+          monthlyDetailBody.innerHTML = res.items.length ? res.items.map(item => `<tr><td>${item.fecha}</td><td>${item.hora}</td><td>${item.tipo}</td><td>${item.motivo}</td></tr>`).join('') : '<tr><td colspan="4">No hay registros para este período.</td></tr>';
+        }, () => setStatus(err.message || String(err))));
     });
 
     function loadDetail() {
