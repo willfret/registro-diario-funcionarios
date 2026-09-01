@@ -447,7 +447,7 @@
         <div class="box"><div class="value" id="monthlyAllExits">0</div><div class="label">Salidas totales del mes</div></div>
       </div>
       <div style="margin-top:14px;">
-        <button type="button" class="secondary" id="monthlyRankingToggle">Funcionarios con más tiempo en el mes</button>
+        <button type="button" class="secondary" id="monthlyRankingToggle">Tiempo de funcionarios</button>
         <div id="monthlyRankingPanel" hidden style="margin-top:12px;">
           <h3 style="margin:0 0 10px;">Funcionarios ordenados por tiempo fuera</h3>
           <div class="detail-list">
@@ -722,7 +722,7 @@
       monthlyAllHours.textContent = data.totalHours || '0h 0m';
       monthlyAllExits.textContent = String(data.totalExits || 0);
       monthlyRankingPanel.hidden = true;
-      monthlyRankingToggle.textContent = 'Funcionarios con más tiempo en el mes';
+      monthlyRankingToggle.textContent = 'Tiempo de funcionarios';
       monthlyRankingBody.innerHTML = data.ranking && data.ranking.length
         ? data.ranking.map((item, index) => `<tr><td>${index + 1}</td><td>${item.funcionario}</td><td>${item.exits}</td><td>${item.totalHours}</td></tr>`).join('')
         : '<tr><td colspan="4">No hay registros para este mes.</td></tr>';
@@ -991,7 +991,7 @@
     monthlyRankingToggle.addEventListener('click', () => {
       monthlyRankingPanel.hidden = !monthlyRankingPanel.hidden;
       monthlyRankingToggle.textContent = monthlyRankingPanel.hidden
-        ? 'Funcionarios con más tiempo en el mes'
+        ? 'Tiempo de funcionarios'
         : 'Ocultar funcionarios con más tiempo';
     });
     downloadReportBtn.addEventListener('click', downloadReport);
