@@ -357,6 +357,7 @@
       <button type="button" class="secondary" id="goMainBtn">Registro rápido</button>
       <button type="button" class="secondary" id="goAddBtn">Agregar nuevo funcionario</button>
       <button type="button" class="secondary" id="goMonthlyBtn">Registro mensuales</button>
+      <button type="button" class="secondary" id="goTimeBtn">Tiempo de funcionarios</button>
     </nav>
 
     <section class="card screen active" id="mainScreen" style="margin-top:18px;">
@@ -395,6 +396,37 @@
         <div class="status" id="status"></div>
         <div class="toast" id="successToast" role="status" aria-live="polite">Registro guardado exitosamente</div>
       </form>
+    </section>
+
+    <section class="card screen" id="timeScreen" style="margin-top:18px;">
+      <div class="detail-hero">
+        <div>
+          <h2 style="margin:0;">Tiempo de funcionarios</h2>
+          <p class="hint" style="margin:4px 0 0;">Listado ordenado desde el mayor tiempo fuera hasta el menor.</p>
+        </div>
+        <div class="actions" style="margin:0;">
+          <button type="button" class="secondary" id="backTimeBtn">Volver</button>
+        </div>
+      </div>
+      <div class="row" style="margin:18px 0 14px;">
+        <div>
+          <label for="timeMonth">Mes</label>
+          <input id="timeMonth" type="month" />
+        </div>
+        <div style="align-self:end;">
+          <button type="button" id="searchTimeBtn">Mostrar funcionarios</button>
+        </div>
+      </div>
+      <div class="detail-grid">
+        <div class="box"><div class="value" id="timeAllHours">0h 0m</div><div class="label">Tiempo total del mes</div></div>
+        <div class="box"><div class="value" id="timeAllExits">0</div><div class="label">Salidas del mes</div></div>
+      </div>
+      <div class="detail-list" style="margin-top:14px;">
+        <table>
+          <thead><tr><th>#</th><th>Funcionario</th><th>Salidas</th><th>Tiempo fuera</th></tr></thead>
+          <tbody id="timeRankingBody"><tr><td colspan="4">Selecciona un mes y presiona “Mostrar funcionarios”.</td></tr></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="card screen active" id="addEmployeeScreen" style="margin-top:18px;">
@@ -542,6 +574,7 @@
     const goMainBtn = document.getElementById('goMainBtn');
     const goAddBtn = document.getElementById('goAddBtn');
     const goMonthlyBtn = document.getElementById('goMonthlyBtn');
+    const goTimeBtn = document.getElementById('goTimeBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const fecha = document.getElementById('fecha');
     const salidaHora = document.getElementById('salidaHora');
@@ -570,6 +603,13 @@
     const monthlyRankingBody = document.getElementById('monthlyRankingBody');
     const monthlyRankingToggle = document.getElementById('monthlyRankingToggle');
     const monthlyRankingPanel = document.getElementById('monthlyRankingPanel');
+    const timeScreen = document.getElementById('timeScreen');
+    const timeMonth = document.getElementById('timeMonth');
+    const searchTimeBtn = document.getElementById('searchTimeBtn');
+    const timeAllHours = document.getElementById('timeAllHours');
+    const timeAllExits = document.getElementById('timeAllExits');
+    const timeRankingBody = document.getElementById('timeRankingBody');
+    const backTimeBtn = document.getElementById('backTimeBtn');
     const backBtn = document.getElementById('backBtn');
     const backMonthlyBtn = document.getElementById('backMonthlyBtn');
     let currentMonthlyReport = null;
@@ -728,8 +768,23 @@
         : '<tr><td colspan="4">No hay registros para este mes.</td></tr>';
     }
 
+    function renderTimeRanking(result) {
+      const data = result || { totalHours: '0h 0m', totalExits: 0, ranking: [] };
+      timeAllHours.textContent = data.totalHours || '0h 0m';
+      timeAllExits.textContent = String(data.totalExits || 0);
+      timeRankingBody.innerHTML = data.ranking && data.ranking.length
+        ? data.ranking.map((item, index) => `<tr><td>${index + 1}</td><td>${item.funcionario}</td><td>${item.exits}</td><td>${item.totalHours}</td></tr>`).join('')
+        : '<tr><td colspan="4">No hay registros para este mes.</td></tr>';
+    }
+
     function loadMonthlyRanking(month) {
       callBackend('getMonthlyRanking', [month], result => renderMonthlyRanking(result), () => loadLocalRecords(records => { localRecords = records; renderMonthlyRanking(localMonthlyRanking(month)); }, () => renderMonthlyRanking(null)));
+    }
+
+    function loadTimeRanking() {
+      const month = timeMonth.value || latestLocalMonth() || fecha.value.slice(0, 7);
+      timeMonth.value = month;
+      callBackend('getMonthlyRanking', [month], result => renderTimeRanking(result), () => loadLocalRecords(records => { localRecords = records; renderTimeRanking(localMonthlyRanking(month)); }, () => renderTimeRanking(null)));
     }
 
     function displayTime(value) {
@@ -836,13 +891,14 @@
     }
 
     function showScreen(screen) {
-      [mainScreen, addEmployeeScreen, monthlyScreen, detailScreen].forEach(el => el.classList.remove('active'));
+      [mainScreen, addEmployeeScreen, monthlyScreen, detailScreen, timeScreen].forEach(el => el.classList.remove('active'));
       screen.classList.add('active');
     }
 
     goMainBtn.addEventListener('click', () => showScreen(mainScreen));
     goAddBtn.addEventListener('click', () => showScreen(addEmployeeScreen));
     goMonthlyBtn.addEventListener('click', () => showScreen(monthlyScreen));
+    goTimeBtn.addEventListener('click', () => { showScreen(timeScreen); loadTimeRanking(); });
     logoutBtn.addEventListener('click', logout);
 
     function loadEmployees() {
@@ -996,11 +1052,13 @@
     });
     downloadReportBtn.addEventListener('click', downloadReport);
     backMonthlyBtn.addEventListener('click', () => showScreen(mainScreen));
+    backTimeBtn.addEventListener('click', () => showScreen(mainScreen));
     backBtn.addEventListener('click', () => showScreen(mainScreen));
     detailMode.addEventListener('change', () => {
       detailValue.value = detailMode.value === 'day' ? fecha.value : fecha.value.slice(0, 7);
     });
     monthlyEmployee.addEventListener('change', loadMonthlyDetail);
+    searchTimeBtn.addEventListener('click', loadTimeRanking);
 
     loadEmployees();
 
