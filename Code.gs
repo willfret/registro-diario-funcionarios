@@ -484,6 +484,13 @@ function getAllRecords() {
   }));
 }
 
+function clearMovementRecords() {
+  const { sheet } = ensureDatabase_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+  return { ok: true, removed: Math.max(0, lastRow - 1), message: 'Todos los registros de entradas y salidas fueron eliminados.' };
+}
+
 function timeToMinutes(value) {
   if (value instanceof Date) {
     return value.getHours() * 60 + value.getMinutes();
