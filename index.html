@@ -478,18 +478,6 @@
         <div class="box"><div class="value" id="monthlyAllHours">0h 0m</div><div class="label">Tiempo total de todos en el mes</div></div>
         <div class="box"><div class="value" id="monthlyAllExits">0</div><div class="label">Salidas totales del mes</div></div>
       </div>
-      <div style="margin-top:14px;">
-        <button type="button" class="secondary" id="monthlyRankingToggle">Tiempo de funcionarios</button>
-        <div id="monthlyRankingPanel" hidden style="margin-top:12px;">
-          <h3 style="margin:0 0 10px;">Funcionarios ordenados por tiempo fuera</h3>
-          <div class="detail-list">
-            <table>
-              <thead><tr><th>#</th><th>Funcionario</th><th>Salidas</th><th>Tiempo fuera</th></tr></thead>
-              <tbody id="monthlyRankingBody"><tr><td colspan="4">Selecciona un mes para ver la lista.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
       <div class="detail-list">
         <table>
           <thead>
@@ -600,9 +588,6 @@
     const detailHours = document.getElementById('detailHours');
     const monthlyAllHours = document.getElementById('monthlyAllHours');
     const monthlyAllExits = document.getElementById('monthlyAllExits');
-    const monthlyRankingBody = document.getElementById('monthlyRankingBody');
-    const monthlyRankingToggle = document.getElementById('monthlyRankingToggle');
-    const monthlyRankingPanel = document.getElementById('monthlyRankingPanel');
     const timeScreen = document.getElementById('timeScreen');
     const timeMonth = document.getElementById('timeMonth');
     const searchTimeBtn = document.getElementById('searchTimeBtn');
@@ -757,15 +742,10 @@
       return { totalMinutes: ranking.reduce((sum, item) => sum + item.totalMinutes, 0), totalHours: `${Math.floor(ranking.reduce((sum, item) => sum + item.totalMinutes, 0) / 60)}h ${ranking.reduce((sum, item) => sum + item.totalMinutes, 0) % 60}m`, totalExits: ranking.reduce((sum, item) => sum + item.exits, 0), ranking };
     }
 
-    function renderMonthlyRanking(result) {
-      const data = result || { totalHours: '0h 0m', totalExits: 0, ranking: [] };
+    function renderMonthlyTotals(result) {
+      const data = result || { totalHours: '0h 0m', totalExits: 0 };
       monthlyAllHours.textContent = data.totalHours || '0h 0m';
       monthlyAllExits.textContent = String(data.totalExits || 0);
-      monthlyRankingPanel.hidden = true;
-      monthlyRankingToggle.textContent = 'Tiempo de funcionarios';
-      monthlyRankingBody.innerHTML = data.ranking && data.ranking.length
-        ? data.ranking.map((item, index) => `<tr><td>${index + 1}</td><td>${item.funcionario}</td><td>${item.exits}</td><td>${item.totalHours}</td></tr>`).join('')
-        : '<tr><td colspan="4">No hay registros para este mes.</td></tr>';
     }
 
     function renderTimeRanking(result) {
@@ -777,8 +757,8 @@
         : '<tr><td colspan="4">No hay registros para este mes.</td></tr>';
     }
 
-    function loadMonthlyRanking(month) {
-      callBackend('getMonthlyRanking', [month], result => renderMonthlyRanking(result), () => loadLocalRecords(records => { localRecords = records; renderMonthlyRanking(localMonthlyRanking(month)); }, () => renderMonthlyRanking(null)));
+    function loadMonthlyTotals(month) {
+      callBackend('getMonthlyRanking', [month], result => renderMonthlyTotals(result), () => loadLocalRecords(records => { localRecords = records; renderMonthlyTotals(localMonthlyRanking(month)); }, () => renderMonthlyTotals(null)));
     }
 
     function loadTimeRanking() {
@@ -1002,7 +982,7 @@
       if (!name) return setStatus('Escribe un funcionario para buscar el registro mensual.');
       setMonthlySearching(true);
       monthlyValue.value = monthlyValue.value || latestLocalMonth() || fecha.value.slice(0, 7);
-      loadMonthlyRanking(monthlyValue.value);
+      loadMonthlyTotals(monthlyValue.value);
       callBackend('getEmployeeDetail', [name, 'month', monthlyValue.value], res => {
           setMonthlySearching(false);
           if (!res || !res.items || !res.items.length) {
@@ -1043,12 +1023,6 @@
     searchMonthlyBtn.addEventListener('click', () => {
       showScreen(monthlyScreen);
       loadMonthlyDetail();
-    });
-    monthlyRankingToggle.addEventListener('click', () => {
-      monthlyRankingPanel.hidden = !monthlyRankingPanel.hidden;
-      monthlyRankingToggle.textContent = monthlyRankingPanel.hidden
-        ? 'Tiempo de funcionarios'
-        : 'Ocultar funcionarios con más tiempo';
     });
     downloadReportBtn.addEventListener('click', downloadReport);
     backMonthlyBtn.addEventListener('click', () => showScreen(mainScreen));
