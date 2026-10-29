@@ -273,6 +273,11 @@
     .balance-positive { color:#1f6e4a !important; }
     .balance-negative { color:#a33b3b !important; }
     .detail-list { max-height: 520px; overflow:auto; }
+    .autocomplete { position: relative; }
+    .autocomplete-list { position:absolute; z-index:20; left:0; right:0; top:100%; max-height:240px; overflow:auto; margin-top:4px; padding:4px; background:white; border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); }
+    .autocomplete-list[hidden] { display:none; }
+    .autocomplete-option { display:block; width:100%; padding:10px 12px; border:0; border-radius:8px; background:white; color:var(--text); text-align:left; font-weight:600; cursor:pointer; }
+    .autocomplete-option:hover, .autocomplete-option:focus { background:#e8f1fa; outline:none; }
     .pill {
       display: inline-flex;
       align-items: center;
@@ -382,7 +387,10 @@
         </div>
 
         <label for="searchFuncionario">Funcionario</label>
-        <input id="searchFuncionario" type="text" list="employeeList" placeholder="Escribe el nombre..." required />
+        <div class="autocomplete">
+          <input id="searchFuncionario" type="text" list="employeeList" placeholder="Escribe el nombre..." autocomplete="off" required />
+          <div id="employeeSuggestions" class="autocomplete-list" hidden></div>
+        </div>
         <datalist id="employeeList"></datalist>
 
         <div class="row3">
@@ -582,6 +590,8 @@
     const authNote = document.getElementById('authNote');
     const searchFuncionario = document.getElementById('searchFuncionario');
     const employeeList = document.getElementById('employeeList');
+    const employeeSuggestions = document.getElementById('employeeSuggestions');
+    let employeeNames = [];
     const mainScreen = document.getElementById('mainScreen');
     const addEmployeeScreen = document.getElementById('addEmployeeScreen');
     const monthlyScreen = document.getElementById('monthlyScreen');
@@ -954,12 +964,32 @@
     }
 
     function fillEmployees(list) {
-      employeeList.innerHTML = list.map(name => `<option value="${name}"></option>`).join('');
-      monthlyEmployee.innerHTML = '<option value="">Selecciona un funcionario...</option>' + list
+      employeeNames = [...new Set((list || []).map(String).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+      employeeList.innerHTML = employeeNames.map(name => `<option value="${name}"></option>`).join('');
+      monthlyEmployee.innerHTML = '<option value="">Selecciona un funcionario...</option>' + employeeNames
         .map(name => `<option value="${name}">${name}</option>`)
         .join('');
-      if (!searchFuncionario.value) searchFuncionario.value = list[0] || '';
-      if (list.length && !monthlyEmployee.value) monthlyEmployee.value = list[0];
+      if (!searchFuncionario.value) searchFuncionario.value = employeeNames[0] || '';
+      if (employeeNames.length && !monthlyEmployee.value) monthlyEmployee.value = employeeNames[0];
+    }
+
+    function renderEmployeeSuggestions() {
+      const query = searchFuncionario.value.trim().toLocaleLowerCase('es');
+      const matches = employeeNames.filter(name => name.toLocaleLowerCase('es').includes(query)).slice(0, 12);
+      employeeSuggestions.replaceChildren();
+      matches.forEach(name => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'autocomplete-option';
+        option.textContent = name;
+        option.addEventListener('mousedown', event => event.preventDefault());
+        option.addEventListener('click', () => {
+          searchFuncionario.value = name;
+          employeeSuggestions.hidden = true;
+        });
+        employeeSuggestions.appendChild(option);
+      });
+      employeeSuggestions.hidden = matches.length === 0;
     }
 
     function showScreen(screen) {
@@ -972,6 +1002,9 @@
     goMonthlyBtn.addEventListener('click', () => showScreen(monthlyScreen));
     goTimeBtn.addEventListener('click', () => { showScreen(timeScreen); loadTimeRanking(); });
     logoutBtn.addEventListener('click', logout);
+    searchFuncionario.addEventListener('input', renderEmployeeSuggestions);
+    searchFuncionario.addEventListener('focus', renderEmployeeSuggestions);
+    searchFuncionario.addEventListener('blur', () => window.setTimeout(() => { employeeSuggestions.hidden = true; }, 150));
 
     function loadEmployees() {
       const dbIndicator = document.getElementById('dbIndicator');
