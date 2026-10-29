@@ -640,7 +640,7 @@
       { email: 'nuvia.aguero@escuelaoriente.cl', password: 'oriente2026' }
     ];
     // Pega aquí la URL de implementación de Apps Script para conectar GitHub con Sheets.
-    const GOOGLE_SHEETS_API_URL = 'https://script.googleusercontent.com/macros/s/AKfycby244RAr7WRS85uaG7hxyy3-Nphipf8CrwXsQZ-khSvV9nlbdcAgtfMWrF7gGVDcSk/exec';
+    const GOOGLE_SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycby244RAr7WRS85uaG7hxyy3-Nphipf8CrwXsQZ-khSvV9nlbdcAgtfMWrF7gGVDcSk/exec';
     function getRememberedEmail() {
       return localStorage.getItem('nec_remembered_email') || '';
     }
@@ -939,8 +939,6 @@
         ? ['funcionario', 'fecha', 'salidaHora', 'regresoHora', 'motivo'] : action === 'getMonthlyRanking' ? ['value'] : ['funcionario', 'mode', 'value'];
       (params || []).forEach((value, index) => query.set(keys[index], value ?? ''));
       const script = document.createElement('script');
-      script.crossOrigin = 'anonymous';
-      script.referrerPolicy = 'no-referrer';
       window[callbackName] = data => {
         delete window[callbackName];
         script.remove();
