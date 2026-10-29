@@ -939,6 +939,8 @@
         ? ['funcionario', 'fecha', 'salidaHora', 'regresoHora', 'motivo'] : action === 'getMonthlyRanking' ? ['value'] : ['funcionario', 'mode', 'value'];
       (params || []).forEach((value, index) => query.set(keys[index], value ?? ''));
       const script = document.createElement('script');
+      script.crossOrigin = 'anonymous';
+      script.referrerPolicy = 'no-referrer';
       window[callbackName] = data => {
         delete window[callbackName];
         script.remove();
