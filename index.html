@@ -744,7 +744,7 @@
     function localEmployeeDetail(name, mode, value) {
       const target = String(name || '').trim().toLowerCase();
       const rows = (localRecords || []).filter(row => {
-        const sameName = String(row.funcionario || '').toLowerCase().includes(target);
+        const sameName = employeeNamesMatch(row.funcionario, target);
         const samePeriod = mode === 'day' ? row.fecha === value : String(row.fecha || '').startsWith(value);
         return sameName && samePeriod;
       }).sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`));
@@ -758,6 +758,14 @@
         if (type === 'regreso') { returns += 1; if (lastExit !== null) { totalMinutes += Math.max(0, minutes - lastExit); lastExit = null; } }
       });
       return { items: rows, summary: { entries, exits, returns, totalMinutes, totalHours: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` } };
+    }
+
+    function employeeNamesMatch(first, second) {
+      const firstTokens = String(first || '').toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(token => token.length >= 3);
+      const secondTokens = String(second || '').toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(token => token.length >= 3);
+      if (!firstTokens.length || !secondTokens.length) return false;
+      const shared = firstTokens.filter(token => secondTokens.includes(token));
+      return shared.length >= Math.min(2, firstTokens.length, secondTokens.length);
     }
 
     function latestLocalMonth() {
