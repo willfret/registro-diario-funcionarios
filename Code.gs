@@ -539,7 +539,10 @@ function timeToMinutes(value) {
   if (typeof value === 'string') {
     const parts = value.trim().split(':');
     if (parts.length >= 2) {
-      return Number(parts[0]) * 60 + Number(parts[1]);
+      const hours = Number(parts[0]);
+      const minutes = Number(parts[1]);
+      const result = hours * 60 + minutes;
+      return Number.isFinite(result) && hours >= 0 && minutes >= 0 && minutes < 60 ? result : 0;
     }
   }
   return 0;
@@ -558,6 +561,9 @@ function dateText_(value) {
 }
 
 function formatMinutes(totalMinutes) {
+  totalMinutes = Number(totalMinutes);
+  if (!Number.isFinite(totalMinutes)) totalMinutes = 0;
+  totalMinutes = Math.max(0, Math.round(totalMinutes));
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
   return `${h}h ${m}m`;

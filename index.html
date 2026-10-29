@@ -651,7 +651,7 @@
       { email: 'nuvia.aguero@escuelaoriente.cl', password: 'oriente2026' }
     ];
     // Pega aquí la URL de implementación de Apps Script para conectar GitHub con Sheets.
-    const GOOGLE_SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbz_7o3LrIYxazBpbqAm3oXkVra_yj0Iba0nViPXwLsDeQ031jRkKvyeyB0MGdV51Myq/exec';
+    const GOOGLE_SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbxGZEYPdJH7hOEu7H7Ki80tUhb19pCKlwN_aeofMgVmLyIzreNp1kLueOVy3qixiMmC/exec';
     function getRememberedEmail() {
       return localStorage.getItem('nec_remembered_email') || '';
     }
@@ -751,7 +751,9 @@
       let exits = 0, returns = 0, entries = 0, totalMinutes = 0, lastExit = null;
       rows.forEach(row => {
         const parts = String(row.hora || '').split(':');
-        const minutes = Number(parts[0]) * 60 + Number(parts[1]);
+        const hours = Number(parts[0]);
+        const mins = Number(parts[1]);
+        const minutes = Number.isFinite(hours) && Number.isFinite(mins) && mins >= 0 && mins < 60 ? hours * 60 + mins : 0;
         const type = String(row.tipo || '').toLowerCase();
         if (type === 'entrada') entries += 1;
         if (type === 'salida' || type === 'salida final') { exits += 1; lastExit = minutes; }
@@ -786,7 +788,9 @@
         rows.forEach(row => {
           if (row.fecha !== lastDate) { lastExit = null; lastDate = row.fecha; }
           const parts = String(row.hora || '').split(':');
-          const minutes = Number(parts[0]) * 60 + Number(parts[1]);
+          const hours = Number(parts[0]);
+          const mins = Number(parts[1]);
+          const minutes = Number.isFinite(hours) && Number.isFinite(mins) && mins >= 0 && mins < 60 ? hours * 60 + mins : 0;
           const type = String(row.tipo || '').toLowerCase();
           if (type === 'salida' || type === 'salida final') { exits += 1; lastExit = minutes; }
           else if (type === 'regreso' && lastExit !== null) { totalMinutes += Math.max(0, minutes - lastExit); lastExit = null; }
@@ -798,7 +802,7 @@
 
     function renderMonthlyTotals(result) {
       const data = result || { totalHours: '0h 0m', totalExits: 0 };
-      monthlyAllHours.textContent = data.totalHours || '0h 0m';
+      monthlyAllHours.textContent = /^\d+h \d+m$/.test(String(data.totalHours || '')) ? data.totalHours : '0h 0m';
       monthlyAllExits.textContent = String(data.totalExits || 0);
     }
 
@@ -858,10 +862,10 @@
 
     function renderTimeRanking(result) {
       const data = result || { totalHours: '0h 0m', totalExits: 0, ranking: [] };
-      timeAllHours.textContent = data.totalHours || '0h 0m';
+      timeAllHours.textContent = /^\d+h \d+m$/.test(String(data.totalHours || '')) ? data.totalHours : '0h 0m';
       timeAllExits.textContent = String(data.totalExits || 0);
       timeRankingBody.innerHTML = data.ranking && data.ranking.length
-        ? data.ranking.map((item, index) => `<tr><td>${index + 1}</td><td>${item.funcionario}</td><td>${item.exits}</td><td>${item.totalHours}</td></tr>`).join('')
+        ? data.ranking.map((item, index) => `<tr><td>${index + 1}</td><td>${item.funcionario}</td><td>${item.exits || 0}</td><td>${/^\d+h \d+m$/.test(String(item.totalHours || '')) ? item.totalHours : '0h 0m'}</td></tr>`).join('')
         : '<tr><td colspan="4">No hay registros para este mes.</td></tr>';
     }
 
