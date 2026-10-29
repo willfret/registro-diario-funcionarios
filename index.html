@@ -470,9 +470,10 @@
       <div class="row" style="margin-bottom: 14px;">
         <div>
           <label for="monthlyEmployee">Funcionario</label>
-          <select id="monthlyEmployee">
-            <option value="">Selecciona un funcionario...</option>
-          </select>
+          <div class="autocomplete">
+            <input id="monthlyEmployee" type="text" placeholder="Escribe el nombre..." autocomplete="off" />
+            <div id="monthlySuggestions" class="autocomplete-list" hidden></div>
+          </div>
         </div>
         <div>
           <label for="monthlyValue">Mes</label>
@@ -609,7 +610,7 @@
     const newEmployee = document.getElementById('newEmployee');
     const addEmployeeBtn = document.getElementById('addEmployeeBtn');
     const monthlyEmployee = document.getElementById('monthlyEmployee');
-    const employeeListMonthly = document.getElementById('employeeListMonthly');
+    const monthlySuggestions = document.getElementById('monthlySuggestions');
     const monthlyValue = document.getElementById('monthlyValue');
     const searchMonthlyBtn = document.getElementById('searchMonthlyBtn');
     const downloadReportBtn = document.getElementById('downloadReportBtn');
@@ -966,9 +967,6 @@
     function fillEmployees(list) {
       employeeNames = [...new Set((list || []).map(String).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
       employeeList.innerHTML = employeeNames.map(name => `<option value="${name}"></option>`).join('');
-      monthlyEmployee.innerHTML = '<option value="">Selecciona un funcionario...</option>' + employeeNames
-        .map(name => `<option value="${name}">${name}</option>`)
-        .join('');
       if (!searchFuncionario.value) searchFuncionario.value = employeeNames[0] || '';
       if (employeeNames.length && !monthlyEmployee.value) monthlyEmployee.value = employeeNames[0];
     }
@@ -992,6 +990,26 @@
       employeeSuggestions.hidden = matches.length === 0;
     }
 
+    function renderMonthlySuggestions() {
+      const query = monthlyEmployee.value.trim().toLocaleLowerCase('es');
+      const matches = employeeNames.filter(name => name.toLocaleLowerCase('es').includes(query)).slice(0, 12);
+      monthlySuggestions.replaceChildren();
+      matches.forEach(name => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'autocomplete-option';
+        option.textContent = name;
+        option.addEventListener('mousedown', event => event.preventDefault());
+        option.addEventListener('click', () => {
+          monthlyEmployee.value = name;
+          monthlySuggestions.hidden = true;
+          loadMonthlyDetail();
+        });
+        monthlySuggestions.appendChild(option);
+      });
+      monthlySuggestions.hidden = matches.length === 0;
+    }
+
     function showScreen(screen) {
       [mainScreen, addEmployeeScreen, monthlyScreen, detailScreen, timeScreen].forEach(el => el.classList.remove('active'));
       screen.classList.add('active');
@@ -1005,6 +1023,9 @@
     searchFuncionario.addEventListener('input', renderEmployeeSuggestions);
     searchFuncionario.addEventListener('focus', renderEmployeeSuggestions);
     searchFuncionario.addEventListener('blur', () => window.setTimeout(() => { employeeSuggestions.hidden = true; }, 150));
+    monthlyEmployee.addEventListener('input', renderMonthlySuggestions);
+    monthlyEmployee.addEventListener('focus', renderMonthlySuggestions);
+    monthlyEmployee.addEventListener('blur', () => window.setTimeout(() => { monthlySuggestions.hidden = true; }, 150));
 
     function loadEmployees() {
       const dbIndicator = document.getElementById('dbIndicator');
