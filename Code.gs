@@ -22,6 +22,7 @@ function apiResponse_(request) {
   else if (action === 'addEmployee') data = addEmployee(p.name);
   else if (action === 'getCompensatoryHours') data = getCompensatoryHours(p.funcionario);
   else if (action === 'saveCompensatoryHours') data = saveCompensatoryHours(p.funcionario, p.hours);
+  else if (action === 'saveCompensatoryEntry') data = saveCompensatoryEntry(p.funcionario, p.fecha, p.hours, p.minutes);
   else if (action === 'savePairedRecord') data = savePairedRecord({
     funcionario: p.funcionario,
     fecha: p.fecha,
@@ -243,6 +244,22 @@ function saveCompensatoryHours(funcionario, hours) {
   if (index >= 0) compensatorySheet.getRange(index + 2, 1, 1, 3).setValues([values]);
   else compensatorySheet.appendRow(values);
   return { ok: true, hours: amount, message: 'Horas compensatorias guardadas correctamente.' };
+}
+
+function saveCompensatoryEntry(funcionario, fecha, hours, minutes) {
+  const cleanName = String(funcionario || '').trim();
+  const cleanDate = String(fecha || '').trim();
+  if (!cleanName || !cleanDate) throw new Error('Selecciona funcionario y fecha.');
+  const h = Math.max(0, Number(String(hours || '').replace(',', '.')) || 0);
+  const m = Math.max(0, Math.min(59, Number(minutes) || 0));
+  const totalHours = h + m / 60;
+  const current = getCompensatoryHours(cleanName);
+  saveCompensatoryHours(cleanName, current + totalHours);
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName('Detalle compensatorios');
+  if (!sheet) { sheet = ss.insertSheet('Detalle compensatorios'); sheet.getRange(1, 1, 1, 5).setValues([['Funcionario', 'Fecha', 'Horas', 'Minutos', 'Actualizado']]); }
+  sheet.appendRow([cleanName, cleanDate, h, m, new Date()]);
+  return { ok: true, hours: totalHours, added: `${h}h ${m}m`, message: 'Horas compensatorias guardadas correctamente.' };
 }
 
 function saveRecord(payload) {
@@ -550,7 +567,10 @@ function timeToMinutes(value) {
   if (typeof value === 'string') {
     const parts = value.trim().split(':');
     if (parts.length >= 2) {
-      return Number(parts[0]) * 60 + Number(parts[1]);
+      const hours = Number(parts[0]);
+      const minutes = Number(parts[1]);
+      const result = hours * 60 + minutes;
+      return Number.isFinite(result) && hours >= 0 && minutes >= 0 && minutes < 60 ? result : 0;
     }
   }
   return 0;
@@ -569,6 +589,9 @@ function dateText_(value) {
 }
 
 function formatMinutes(totalMinutes) {
+  totalMinutes = Number(totalMinutes);
+  if (!Number.isFinite(totalMinutes)) totalMinutes = 0;
+  totalMinutes = Math.max(0, Math.round(totalMinutes));
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
   return `${h}h ${m}m`;
