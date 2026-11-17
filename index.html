@@ -153,6 +153,10 @@
     th, td { text-align:left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
     th { font-size: 13px; text-transform: uppercase; letter-spacing:.04em; color: var(--accent); }
     .status { margin-top: 12px; font-weight: 700; color: var(--accent-3); }
+    .loading-status { display: none; align-items: center; gap: 8px; margin: 12px 0; color: var(--accent-3); font-weight: 700; }
+    .loading-status.show { display: flex; }
+    .loading-spinner { width: 16px; height: 16px; border: 3px solid rgba(30, 64, 175, .2); border-top-color: var(--accent-3); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .toast { display:none; margin-top:14px; padding:12px 16px; border:1px solid rgba(31,110,74,.3); border-radius:12px; background:#e9f7ef; color:#17613e; font-weight:800; text-align:center; }
     .toast.show { display:block; }
     .hint { color: var(--muted); font-size: 14px; line-height: 1.5; }
@@ -418,6 +422,7 @@
         <div><label for="dateSearchValue">Fecha</label><input id="dateSearchValue" type="date" /></div>
         <div style="align-self:end;"><button type="button" id="searchDateBtn">Mostrar registros del día</button></div>
       </div>
+      <div class="loading-status" id="dateLoading" role="status" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span>Buscando registros de la fecha...</span></div>
       <div class="detail-grid">
         <div class="box"><div class="value" id="dateAllEmployees">0</div><div class="label">Funcionarios con salidas</div></div>
         <div class="box"><div class="value" id="dateAllExits">0</div><div class="label">Salidas del día</div></div>
@@ -621,6 +626,7 @@
     const salidaHora = document.getElementById('salidaHora');
     const entradaHora = document.getElementById('entradaHora');
     const statusEl = document.getElementById('status');
+    const dateLoading = document.getElementById('dateLoading');
     const successToast = document.getElementById('successToast');
     const newEmployee = document.getElementById('newEmployee');
     const addEmployeeBtn = document.getElementById('addEmployeeBtn');
@@ -729,6 +735,12 @@
     entradaHora.value = today.toTimeString().slice(0, 5);
 
     function setStatus(msg) { statusEl.textContent = msg; }
+
+    function setDateLoading(isLoading) {
+      dateLoading.classList.toggle('show', isLoading);
+      searchDateBtn.disabled = isLoading;
+      searchDateBtn.textContent = isLoading ? 'Buscando...' : 'Mostrar registros del día';
+    }
 
     function showSuccess(message) {
       successToast.textContent = message;
@@ -917,6 +929,7 @@
     }
 
     function renderDailyRecords(items, date) {
+      setDateLoading(false);
       const groups = {};
       (items || []).forEach(item => {
         const name = String(item.funcionario || '').trim();
@@ -948,6 +961,7 @@
     function loadDailyRecords() {
       const date = dateSearchValue.value;
       if (!date) { dateDetailBody.innerHTML = '<tr><td colspan="5">Selecciona una fecha.</td></tr>'; return; }
+      setDateLoading(true);
       const renderFromAllRecords = () => callBackend('getAllRecords', [], records => {
         renderDailyRecords((records || []).filter(row => String(row.fecha || '') === date), date);
       }, () => loadLocalRecords(records => {
