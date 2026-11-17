@@ -948,10 +948,13 @@
     function loadDailyRecords() {
       const date = dateSearchValue.value;
       if (!date) { dateDetailBody.innerHTML = '<tr><td colspan="5">Selecciona una fecha.</td></tr>'; return; }
-      callBackend('getDailyRecords', [date], result => renderDailyRecords(result, date), () => loadLocalRecords(records => {
+      const renderFromAllRecords = () => callBackend('getAllRecords', [], records => {
+        renderDailyRecords((records || []).filter(row => String(row.fecha || '') === date), date);
+      }, () => loadLocalRecords(records => {
         localRecords = records;
         renderDailyRecords(records.filter(row => String(row.fecha || '') === date), date);
       }, () => renderDailyRecords([], date)));
+      callBackend('getDailyRecords', [date], result => renderDailyRecords(result, date), renderFromAllRecords);
     }
 
     function renderPairedRows(items) {
@@ -1006,7 +1009,7 @@
       }
       const callbackName = `sheetsCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const query = new URLSearchParams({ action, callback: callbackName });
-      const keys = action === 'getEmployees' ? [] : action === 'addEmployee' ? ['name'] : action === 'getDailyRecords' ? ['fecha'] : action === 'getCompensatoryHours'
+      const keys = action === 'getEmployees' || action === 'getAllRecords' ? [] : action === 'addEmployee' ? ['name'] : action === 'getDailyRecords' ? ['fecha'] : action === 'getCompensatoryHours'
         ? ['funcionario'] : action === 'saveCompensatoryHours' ? ['funcionario', 'hours'] : action === 'savePairedRecord'
         ? ['funcionario', 'fecha', 'salidaHora', 'regresoHora', 'motivo'] : action === 'getMonthlyRanking' ? ['value'] : ['funcionario', 'mode', 'value'];
       (params || []).forEach((value, index) => query.set(keys[index], value ?? ''));
