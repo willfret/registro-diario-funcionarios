@@ -522,7 +522,7 @@
         <div class="row">
           <div>
             <label for="compensatoryHours">Horas compensatorias</label>
-            <input id="compensatoryHours" type="number" min="0" step="0.25" value="0" />
+            <input id="compensatoryHours" type="text" inputmode="numeric" placeholder="2:30" value="0:00" pattern="^\d+:[0-5]\d$" />
           </div>
           <div style="align-self:end;">
             <button type="button" id="saveCompensatoryBtn">Guardar horas compensatorias</button>
@@ -836,11 +836,24 @@
       return `${sign}${Math.floor(absolute / 60)} h ${absolute % 60} min`;
     }
 
+    function parseDurationInput(value) {
+      const text = String(value || '').trim();
+      const match = text.match(/^(\d+)\s*:\s*([0-5]\d)$/);
+      if (match) return Number(match[1]) + Number(match[2]) / 60;
+      const decimal = Number(text.replace(',', '.'));
+      return Number.isFinite(decimal) && decimal >= 0 ? decimal : NaN;
+    }
+
+    function formatDurationInput(hours) {
+      const minutes = Math.max(0, Math.round((Number(hours) || 0) * 60));
+      return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
+    }
+
     function renderCompensatoryBalance(hours, usedMinutes) {
       const availableMinutes = Math.round((Number(hours) || 0) * 60);
       const used = Math.max(0, Math.round(Number(usedMinutes) || 0));
       const balance = availableMinutes - used;
-      compensatoryHours.value = Number(hours) || 0;
+      compensatoryHours.value = formatDurationInput(hours);
       compensatoryTotal.textContent = formatMinutesLabel(availableMinutes);
       usedExitTime.textContent = formatMinutesLabel(used);
       compensatoryBalance.textContent = formatMinutesLabel(balance, true);
@@ -865,7 +878,12 @@
     function saveCompensatoryBalance() {
       const name = monthlyEmployee.value.trim();
       if (!name) return setStatus('Selecciona un funcionario para guardar sus horas compensatorias.');
-      const hours = Math.max(0, Number(compensatoryHours.value) || 0);
+      const hours = parseDurationInput(compensatoryHours.value);
+      if (!Number.isFinite(hours)) {
+        compensatoryStatus.textContent = 'Usa el formato horas:minutos, por ejemplo 2:30.';
+        compensatoryStatus.style.color = 'var(--accent-2)';
+        return;
+      }
       saveCompensatoryBtn.disabled = true;
       callBackend('saveCompensatoryHours', [name, hours], result => {
         saveCompensatoryBtn.disabled = false;
